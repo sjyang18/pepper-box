@@ -172,6 +172,8 @@ public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
                 for (String id : ids) {
 
                     String brokerInfo = new String(zk.getData(PropsKeys.BROKER_IDS_ZK_PATH + "/" + id, false, null));
+                    log.info("Broker Info from zk: " + brokerInfo);
+
                     JsonObject jsonObject = Json.parse(brokerInfo).asObject();
 
                     String brokerHost = jsonObject.getString(PropsKeys.HOST, "");
@@ -187,7 +189,7 @@ public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
                     }
 
                 }
-            } catch (IOException | KeeperException | InterruptedException e) {
+            } catch (IOException | KeeperException | InterruptedException | UnsupportedOperationException e) {
 
                 log.error("Failed to get broker information", e);
 
