@@ -73,6 +73,11 @@ public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
         defaultParameters.addArgument(ProducerKeys.JAVA_SEC_KRB5_CONFIG, ProducerKeys.JAVA_SEC_KRB5_CONFIG_DEFAULT);
         defaultParameters.addArgument(ProducerKeys.SASL_KERBEROS_SERVICE_NAME, ProducerKeys.SASL_KERBEROS_SERVICE_NAME_DEFAULT);
         defaultParameters.addArgument(ProducerKeys.SASL_MECHANISM, ProducerKeys.SASL_MECHANISM_DEFAULT);
+        defaultParameters.addArgument(ProducerKeys.SASL_JAAS_CONFIG, ProducerKeys.SASL_JAAS_CONFIG_DEFAULT);
+        defaultParameters.addArgument(ProducerKeys.SSL_ENABLED_PROTOCOLS, ProducerKeys.SSL_ENABLED_PROTOCOLS_DEFAULT);
+        defaultParameters.addArgument(ProducerKeys.SSL_TRUSTSTORE_LOCATION, ProducerKeys.SSL_TRUSTSTORE_LOCATION_DEFAULT);
+        defaultParameters.addArgument(ProducerKeys.SSL_TRUSTSTORE_PASSWORD, ProducerKeys.SSL_TRUSTSTORE_PASSWORD_DEFAULT);
+        defaultParameters.addArgument(ProducerKeys.SSL_TRUSTSTORE_TYPE, ProducerKeys.SSL_TRUSTSTORE_TYPE_DEFAULT);
         return defaultParameters;
     }
 
@@ -99,14 +104,29 @@ public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
         props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, context.getParameter(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG));
         props.put(ProducerKeys.SASL_MECHANISM, context.getParameter(ProducerKeys.SASL_MECHANISM));
 
+        final String security_protocol = context.getParameter(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG);
+        log.info("security_protocol set to[" + security_protocol + "], comparing to [" + SecurityProtocol.SASL_SSL.name +"].");
+        if (security_protocol.equals(SecurityProtocol.SASL_SSL.name)) {
+            log.info("Adding SASL_SSL parameters for Kafka to use.");
+            props.put(ProducerKeys.SASL_JAAS_CONFIG, context.getParameter(ProducerKeys.SASL_JAAS_CONFIG));
+            props.put(ProducerKeys.SASL_MECHANISM, context.getParameter(ProducerKeys.SASL_MECHANISM));
+
+            props.put(ProducerKeys.SSL_ENABLED_PROTOCOLS, context.getParameter(ProducerKeys.SSL_ENABLED_PROTOCOLS));
+            props.put(ProducerKeys.SSL_TRUSTSTORE_LOCATION, context.getParameter(ProducerKeys.SSL_TRUSTSTORE_LOCATION));
+            props.put(ProducerKeys.SSL_TRUSTSTORE_PASSWORD, context.getParameter(ProducerKeys.SSL_TRUSTSTORE_PASSWORD));
+            props.put(ProducerKeys.SSL_TRUSTSTORE_TYPE, context.getParameter(ProducerKeys.SSL_TRUSTSTORE_TYPE));
+        }
+
         Iterator<String> parameters = context.getParameterNamesIterator();
         parameters.forEachRemaining(parameter -> {
             if (parameter.startsWith("_")) {
+                log.info("Adding: " + parameter);
                 props.put(parameter.substring(1), context.getParameter(parameter));
             }
         });
         String kerberosEnabled = context.getParameter(ProducerKeys.KERBEROS_ENABLED);
         if (kerberosEnabled != null && kerberosEnabled.equals(ProducerKeys.FLAG_YES)) {
+            log.info("Adding the Kerberos related parameters.");
             System.setProperty(ProducerKeys.JAVA_SEC_AUTH_LOGIN_CONFIG, context.getParameter(ProducerKeys.JAVA_SEC_AUTH_LOGIN_CONFIG));
             System.setProperty(ProducerKeys.JAVA_SEC_KRB5_CONFIG, context.getParameter(ProducerKeys.JAVA_SEC_KRB5_CONFIG));
             props.put(ProducerKeys.SASL_KERBEROS_SERVICE_NAME, context.getParameter(ProducerKeys.SASL_KERBEROS_SERVICE_NAME));
