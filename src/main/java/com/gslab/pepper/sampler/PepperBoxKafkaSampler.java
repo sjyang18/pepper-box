@@ -34,6 +34,7 @@ import java.util.Properties;
  */
 public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
 
+    public static final String GENERATE_PER_THREAD_TOPICS = "generate.per-thread.topics";
     //kafka producer
     private KafkaProducer<String, Object> producer;
 
@@ -78,6 +79,7 @@ public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
         defaultParameters.addArgument(ProducerKeys.SSL_TRUSTSTORE_LOCATION, ProducerKeys.SSL_TRUSTSTORE_LOCATION_DEFAULT);
         defaultParameters.addArgument(ProducerKeys.SSL_TRUSTSTORE_PASSWORD, ProducerKeys.SSL_TRUSTSTORE_PASSWORD_DEFAULT);
         defaultParameters.addArgument(ProducerKeys.SSL_TRUSTSTORE_TYPE, ProducerKeys.SSL_TRUSTSTORE_TYPE_DEFAULT);
+        defaultParameters.addArgument(GENERATE_PER_THREAD_TOPICS, "NO");
         return defaultParameters;
     }
 
@@ -134,6 +136,10 @@ public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
 
         placeHolder = context.getParameter(PropsKeys.MESSAGE_PLACEHOLDER_KEY);
         topic = context.getParameter(ProducerKeys.KAFKA_TOPIC_CONFIG);
+        if (context.getParameter(GENERATE_PER_THREAD_TOPICS).equalsIgnoreCase("YES")) {
+            topic = topic + "." + JMeterContextService.getContext().getThreadNum();
+            log.info("Using custom Topic: " + topic);
+        }
         producer = new KafkaProducer<String, Object>(props);
 
     }
