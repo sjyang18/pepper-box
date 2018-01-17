@@ -65,6 +65,8 @@ public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
         defaultParameters.addArgument(ProducerConfig.LINGER_MS_CONFIG, ProducerKeys.LINGER_MS_CONFIG_DEFAULT);
         defaultParameters.addArgument(ProducerConfig.BUFFER_MEMORY_CONFIG, ProducerKeys.BUFFER_MEMORY_CONFIG_DEFAULT);
         defaultParameters.addArgument(ProducerConfig.ACKS_CONFIG, ProducerKeys.ACKS_CONFIG_DEFAULT);
+        defaultParameters.addArgument(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION,"5");
+        defaultParameters.addArgument(ProducerConfig.RETRIES_CONFIG, "0");
         defaultParameters.addArgument(ProducerConfig.SEND_BUFFER_CONFIG, ProducerKeys.SEND_BUFFER_CONFIG_DEFAULT);
         defaultParameters.addArgument(ProducerConfig.RECEIVE_BUFFER_CONFIG, ProducerKeys.RECEIVE_BUFFER_CONFIG_DEFAULT);
         defaultParameters.addArgument(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.PLAINTEXT.name);
@@ -97,6 +99,9 @@ public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, context.getParameter(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG));
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, context.getParameter(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG));
         props.put(ProducerConfig.ACKS_CONFIG, context.getParameter(ProducerConfig.ACKS_CONFIG));
+        props.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION,
+                context.getParameter(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION));
+        props.put(ProducerConfig.RETRIES_CONFIG, context.getParameter(ProducerConfig.RETRIES_CONFIG));
         props.put(ProducerConfig.SEND_BUFFER_CONFIG, context.getParameter(ProducerConfig.SEND_BUFFER_CONFIG));
         props.put(ProducerConfig.RECEIVE_BUFFER_CONFIG, context.getParameter(ProducerConfig.RECEIVE_BUFFER_CONFIG));
         props.put(ProducerConfig.BATCH_SIZE_CONFIG, context.getParameter(ProducerConfig.BATCH_SIZE_CONFIG));
@@ -159,7 +164,6 @@ public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
         Object message = JMeterContextService.getContext().getVariables().getObject(placeHolder);
 
         try {
-
             ProducerRecord<String, Object> producerRecord = new ProducerRecord<String, Object>(topic, message);
             producer.send(producerRecord);
             sampleResult.setResponseData(message.toString(), StandardCharsets.UTF_8.name());
