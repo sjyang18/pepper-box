@@ -9,6 +9,8 @@ import org.apache.jmeter.protocol.java.sampler.AbstractJavaSamplerClient;
 import org.apache.jmeter.protocol.java.sampler.JavaSamplerContext;
 import org.apache.jmeter.samplers.SampleResult;
 import org.apache.jmeter.threads.JMeterContextService;
+import org.apache.jmeter.threads.JMeterVariables;
+import org.apache.jmeter.util.JMeterUtils;
 import org.apache.jorphan.logging.LoggingManager;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -55,6 +57,10 @@ public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
     public Arguments getDefaultParameters() {
 
         Arguments defaultParameters = new Arguments();
+
+        log.info(String.format("Threads num %d, total %d",
+                JMeterContextService.getNumberOfThreads(), JMeterContextService.getTotalThreads()));
+
         defaultParameters.addArgument(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, ProducerKeys.BOOTSTRAP_SERVERS_CONFIG_DEFAULT);
         defaultParameters.addArgument(ProducerKeys.ZOOKEEPER_SERVERS, ProducerKeys.ZOOKEEPER_SERVERS_DEFAULT);
         defaultParameters.addArgument(ProducerKeys.KAFKA_TOPIC_CONFIG, ProducerKeys.KAFKA_TOPIC_CONFIG_DEFAULT);
@@ -93,6 +99,13 @@ public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
     @Override
     public void setupTest(JavaSamplerContext context) {
 
+        try {
+            JMeterVariables jMeterVariables = new JMeterVariables();
+            log.info("zk = " + JMeterContextService.getContext().getVariables().get("zookeepers"));
+            log.info("vars(\"zookeepers\":" +jMeterVariables.get("zookeepers"));
+        } catch (Exception e) {
+            log.error("Can't get the jmeter vars", e);
+        }
         Properties props = new Properties();
 
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, getBrokerServers(context));
@@ -141,6 +154,16 @@ public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
 
         placeHolder = context.getParameter(PropsKeys.MESSAGE_PLACEHOLDER_KEY);
         topic = context.getParameter(ProducerKeys.KAFKA_TOPIC_CONFIG);
+
+        System.setProperty("A", topic);  // Seems to work but I can't find how to use it elsewhere.
+        try {
+            JMeterUtils.setProperty("B", topic);
+            log.info("Set Properties System.setProperty A and B to topic: " + topic);
+        } catch (NullPointerException npe) {
+            // This catch is needed otherwise the tests fail with the NPE
+            log.error("couldn't find JMeterUtils.");
+        }
+
         if (context.getParameter(GENERATE_PER_THREAD_TOPICS).equalsIgnoreCase("YES")) {
             topic = topic + "." + JMeterContextService.getContext().getThreadNum();
             log.info("Using custom Topic: " + topic);
@@ -210,33 +233,22 @@ public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
                     int brokerPort = jsonObject.getInt(PropsKeys.PORT, -1);
 
                     if (!brokerHost.isEmpty() && brokerPort != -1) {
-
                         kafkaBrokers.append(brokerHost);
                         kafkaBrokers.append(":");
                         kafkaBrokers.append(brokerPort);
                         kafkaBrokers.append(",");
-
                     }
-
                 }
             } catch (IOException | KeeperException | InterruptedException | UnsupportedOperationException e) {
-
                 log.error("Failed to get broker information", e);
-
             }
-
         }
 
         if (kafkaBrokers.length() > 0) {
-
             kafkaBrokers.setLength(kafkaBrokers.length() - 1);
-
             return kafkaBrokers.toString();
-
         } else {
-
             return  context.getParameter(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG);
-
         }
     }
 }
