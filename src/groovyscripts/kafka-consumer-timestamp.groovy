@@ -23,20 +23,32 @@ import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.protocol.SecurityProtocol
 
-String bootstrap_servers = vars.get("kafkabrokers") // get or die
-String topic = vars.get("topic")  // get or die
-Boolean generate_per_thread_topics = vars.get("generate.per-thread.topics") // default to false
+String bootstrap_servers = vars.get("bootstrap.servers") // get or die
+String topic = vars.get("topic.name")  // get or die
+String generate_per_thread_topics = vars.get("per.thread.topicnames") // default to false
+String threadz = props.get("threadz")
+Integer counter = Integer.valueOf(args[0]) % Integer.valueOf(threadz)
 
 String sasl_jaas_username = vars.get("sasl.jaas.username")
 String sasl_jaas_password = vars.get("sasl.jaas.password")
 String security_protocol = vars.get("security.protocol")
+log.info("security.protocol:" + security_protocol)
+
 String ssl_truststore_location = vars.get("ssl.truststore.location")
 String ssl_truststore_password = vars.get("ssl.truststore.password")
 
-static final Long WAITING_PERIOD = 30000  // 30 seconds to wait for additional messages.
+Long WAITING_PERIOD = 30000  // 30 seconds to wait for additional messages.
 
-// Add validation of the input parameters around here. This is only an example
+// Add validation of the input parameters around here. These are only examples
 // See https://github.com/commercetest/pepper-box/issues/8 for context
+
+if (bootstrap_servers.length() < 8) {
+    log.error("bootstrap.servers too short to be trusted: " + bootstrap_servers)
+    ctx.getEngine().stopTest()
+} else {
+    log.info("bootstrap.servers:" + bootstrap_servers)
+}
+
 if (sasl_jaas_username.length() < 3) {
    log.error("sasl.jaas.username too short, aborting test")
    ctx.getEngine().stopTest()
@@ -63,7 +75,6 @@ props.put("key.deserializer",
         "org.apache.kafka.common.serialization.StringDeserializer")
 props.put("value.deserializer",
         "org.apache.kafka.common.serialization.StringDeserializer")
-KafkaConsumer<String, String> consumer = new KafkaConsumer<String, String>(props)
 
 /*
  * The following is essentially a replica of what I've coded in the Java code
@@ -80,6 +91,7 @@ if (security_protocol == SecurityProtocol.SASL_SSL.name) {
     props.put("ssl.truststore.password", ssl_truststore_password)
     props.put("ssl.truststore.type", "JKS")
 }
+
 /*
         final String security_protocol = context.getParameter(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG);
         log.info("security_protocol set to[" + security_protocol + "], comparing to [" + SecurityProtocol.SASL_SSL.name +"].");
@@ -94,8 +106,10 @@ if (security_protocol == SecurityProtocol.SASL_SSL.name) {
             props.put(ProducerKeys.SSL_TRUSTSTORE_TYPE, context.getParameter(ProducerKeys.SSL_TRUSTSTORE_TYPE));
  */
 
-if (generate_per_thread_topics?.trim && generate_per_thread_topics.equalsIgnoreCase("yes")) {
-    thread_topic_name = topic + "." + Thread.currentThread().getId()
+KafkaConsumer<String, String> consumer = new KafkaConsumer<String, String>(props)
+
+if (generate_per_thread_topics?.trim() && generate_per_thread_topics.equalsIgnoreCase("yes")) {
+    thread_topic_name = topic + "." + counter
     consumer.subscribe(Arrays.asList(thread_topic_name))
     log.info("Subscribed to per thread topic:" + thread_topic_name)
 } else {
@@ -105,7 +119,8 @@ if (generate_per_thread_topics?.trim && generate_per_thread_topics.equalsIgnoreC
 
 long t = System.currentTimeMillis();
 long end = t + WAITING_PERIOD;
-f = new FileOutputStream("results.json", true);
+String results_filename = "results-" + counter + ".json"
+f = new FileOutputStream(results_filename, true);
 p = new PrintStream(f);
 while (System.currentTimeMillis()<end)
 {
