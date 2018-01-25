@@ -169,7 +169,7 @@
               </elementProp>
               <elementProp name="kafka.topic.name" elementType="Argument">
                 <stringProp name="Argument.name">kafka.topic.name</stringProp>
-                <stringProp name="Argument.value">${topic}</stringProp>
+                <stringProp name="Argument.value">foobarbaz</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="key.serializer" elementType="Argument">
