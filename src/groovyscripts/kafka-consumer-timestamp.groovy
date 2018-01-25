@@ -23,23 +23,19 @@ import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.protocol.SecurityProtocol
 
-String bootstrap_servers = vars.get("bootstrap.servers") // get or die
-String topic = vars.get("topic")  // get or die
-if(!(topic && bootstrap_servers)) {
-    log.error("Missing a parameter (topic.name or bootstrap.servers)");
-    ctx.getEngine().stopTest();
-}
-String generate_per_thread_topics = vars.get("per.thread.topicnames") // default to false
-String threadz = props.get("threadz")
+String bootstrap_servers = getParam("bootstrap.servers", true)
+String topic = getParam("topic", true)
+String generate_per_thread_topics = getParam("per.thread.topicnames", false, false)
+String threadz = getParam("threadz", true, 5, 'integer')
 Integer counter = Integer.valueOf(args[0]) % Integer.valueOf(threadz)
 
-String sasl_jaas_username = vars.get("sasl.jaas.username")
-String sasl_jaas_password = vars.get("sasl.jaas.password")
-String security_protocol = vars.get("security.protocol")
-log.info("security.protocol:" + security_protocol)
+String sasl_jaas_username = getParam("sasl.jaas.username")
+String sasl_jaas_password = getParam("sasl.jaas.password")
+String security_protocol = getParam("security.protocol")
+log.info("using security.protocol:" + security_protocol)
 
-String ssl_truststore_location = vars.get("ssl.truststore.location")
-String ssl_truststore_password = vars.get("ssl.truststore.password")
+String ssl_truststore_location = getParam("ssl.truststore.location")
+String ssl_truststore_password = getParam("ssl.truststore.password")
 
 Long WAITING_PERIOD = 30000  // 30 seconds to wait for additional messages.
 
@@ -140,3 +136,33 @@ while (System.currentTimeMillis()<end)
 consumer.close()
 p.close()
 f.close()
+
+
+def getParam(String paramName, boolean required = false, fallbackValue = null, castType = 'string'){
+    String val = vars.get(paramName);
+    if(val == null) {
+        if(required) {
+            log.error("InvalidArgument - Parameter [" + paramName + "] is required");
+            ctx.getEngine().stopTestImmediately();
+        }
+        log.info("CONFIG ["+paramName+"="+fallbackValue+"]");
+        return fallbackValue;
+    } else {
+        try {
+            log.info("CONFIG ["+paramName+"="+val+"]");
+            if (castType == 'string') {
+                return val;
+            } else if (castType == 'integer') {
+                return Integer.valueOf(val);
+            } else  if(castType == 'boolean') {
+                return Boolean.valueOf(val);
+            } else {
+                log.warn("InvalidArgumentType - Unexpected type ["+castType+"] for parameter ["+paramName+"] - Use one of [string,integer,boolean]");
+                return val;
+            }
+        } catch(e) {
+            log.error("InvalidArgument - Unable to cast ["+paramName+"] (["+val+"]) to a ["+castType+"]");
+            ctx.getEngine().stopTestImmediately();
+        }
+    }
+}
