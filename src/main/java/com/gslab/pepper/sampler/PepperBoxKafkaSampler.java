@@ -101,9 +101,8 @@ public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
 
         try {
             JMeterVariables jMeterVariables = new JMeterVariables();
-            log.info("zk = " + JMeterContextService.getContext().getVariables().get("zookeeper.servers"));
-            log.info("vars(\"zookeepers\":" +jMeterVariables.get("zookeeper.servers"));
-            log.info("kafka.topic.name = " + jMeterVariables.get("kafka.topic.name"));
+            log.info("zk = " + JMeterContextService.getContext().getVariables().get("zookeepers"));
+            log.info("vars(\"zookeepers\":" +jMeterVariables.get("zookeepers"));
         } catch (Exception e) {
             log.error("Can't get the jmeter vars", e);
         }

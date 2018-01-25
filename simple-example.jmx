@@ -37,8 +37,8 @@
             <stringProp name="Argument.desc">The name of the topic to use. Where per-thread topics are enabled this will be used as the prefix</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
-          <elementProp name="per.thread.topicnames" elementType="Argument">
-            <stringProp name="Argument.name">per.thread.topicnames</stringProp>
+          <elementProp name="generate.per-thread.topics" elementType="Argument">
+            <stringProp name="Argument.name">generate.per-thread.topics</stringProp>
             <stringProp name="Argument.value">YES</stringProp>
             <stringProp name="Argument.desc">Set to yes to have a separate topic per thread. If so, a suffix of the thread&apos;s number will be added e.g. pepperbox-test.0</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
