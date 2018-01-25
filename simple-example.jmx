@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<jmeterTestPlan version="1.2" properties="3.2" jmeter="3.3 r1808647">
+<jmeterTestPlan version="1.2" properties="3.2" jmeter="3.2 r1790748">
   <hashTree>
     <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Sample Test Plan" enabled="true">
       <stringProp name="TestPlan.comments">Sample test plan for pepper-box to test production and consumption of Kafka topics.</stringProp>
@@ -163,7 +163,7 @@
               </elementProp>
               <elementProp name="kafka.topic.name" elementType="Argument">
                 <stringProp name="Argument.name">kafka.topic.name</stringProp>
-                <stringProp name="Argument.value">foobarbaz</stringProp>
+                <stringProp name="Argument.value">${topic}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="key.serializer" elementType="Argument">
@@ -199,6 +199,16 @@
               <elementProp name="acks" elementType="Argument">
                 <stringProp name="Argument.name">acks</stringProp>
                 <stringProp name="Argument.value">1</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+              <elementProp name="max.in.flight.requests.per.connection" elementType="Argument">
+                <stringProp name="Argument.name">max.in.flight.requests.per.connection</stringProp>
+                <stringProp name="Argument.value">5</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+              <elementProp name="retries" elementType="Argument">
+                <stringProp name="Argument.name">retries</stringProp>
+                <stringProp name="Argument.value">0</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="send.buffer.bytes" elementType="Argument">
@@ -244,6 +254,31 @@
               <elementProp name="sasl.mechanism" elementType="Argument">
                 <stringProp name="Argument.name">sasl.mechanism</stringProp>
                 <stringProp name="Argument.value">PLAIN</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+              <elementProp name="sasl.jaas.config" elementType="Argument">
+                <stringProp name="Argument.name">sasl.jaas.config</stringProp>
+                <stringProp name="Argument.value">org.apache.kafka.security.plain.PlainLoginModule required username=&quot;alice&quot; password=&quot;secret&quot;;</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+              <elementProp name="ssl.enabled.protocols" elementType="Argument">
+                <stringProp name="Argument.name">ssl.enabled.protocols</stringProp>
+                <stringProp name="Argument.value">TLSv1.2</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+              <elementProp name="ssl.truststore.location" elementType="Argument">
+                <stringProp name="Argument.name">ssl.truststore.location</stringProp>
+                <stringProp name="Argument.value">/replace/me/client.truststore.jks</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+              <elementProp name="ssl.truststore.password" elementType="Argument">
+                <stringProp name="Argument.name">ssl.truststore.password</stringProp>
+                <stringProp name="Argument.value">&lt;replace with the correct password&gt;</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+              <elementProp name="ssl.truststore.type" elementType="Argument">
+                <stringProp name="Argument.name">ssl.truststore.type</stringProp>
+                <stringProp name="Argument.value">JKS</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="generate.per-thread.topics" elementType="Argument">
