@@ -24,7 +24,11 @@ import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.protocol.SecurityProtocol
 
 String bootstrap_servers = vars.get("bootstrap.servers") // get or die
-String topic = vars.get("topic.name")  // get or die
+String topic = vars.get("topic")  // get or die
+if(!(topic && bootstrap_servers)) {
+    log.error("Missing a parameter (topic.name or bootstrap.servers)");
+    ctx.getEngine().stopTest();
+}
 String generate_per_thread_topics = vars.get("per.thread.topicnames") // default to false
 String threadz = props.get("threadz")
 Integer counter = Integer.valueOf(args[0]) % Integer.valueOf(threadz)
@@ -120,6 +124,7 @@ if (generate_per_thread_topics?.trim() && generate_per_thread_topics.equalsIgnor
 long t = System.currentTimeMillis();
 long end = t + WAITING_PERIOD;
 String results_filename = "results-" + counter + ".json"
+log.info("Creating file [" + results_filename + "]");
 f = new FileOutputStream(results_filename, true);
 p = new PrintStream(f);
 while (System.currentTimeMillis()<end)
