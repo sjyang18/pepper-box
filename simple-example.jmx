@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<jmeterTestPlan version="1.2" properties="3.2" jmeter="3.2 r1790748">
+<jmeterTestPlan version="1.2" properties="3.2" jmeter="3.3 r1808647">
   <hashTree>
     <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Sample Test Plan" enabled="true">
       <stringProp name="TestPlan.comments">Sample test plan for pepper-box to test production and consumption of Kafka topics.</stringProp>
@@ -21,13 +21,13 @@
         <collectionProp name="Arguments.arguments">
           <elementProp name="bootstrap.servers" elementType="Argument">
             <stringProp name="Argument.name">bootstrap.servers</stringProp>
-            <stringProp name="Argument.value">${__P(bootstrap-servers,localhost:9092)}</stringProp>
+            <stringProp name="Argument.value">${__P(bootstrapservers,localhost:9092)}</stringProp>
             <stringProp name="Argument.desc">One or more of the Kafka nodes as per https://docs.confluent.io/current/kafka-rest/docs/config.html</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="zookeeper.servers" elementType="Argument">
             <stringProp name="Argument.name">zookeeper.servers</stringProp>
-            <stringProp name="Argument.value">${__P(zookeeper-servers,localhost:2181)}</stringProp>
+            <stringProp name="Argument.value">${__P(zookeeperservers,localhost:2181)}</stringProp>
             <stringProp name="Argument.desc">One or more Zookeeper servers as per https://docs.confluent.io/current/kafka-rest/docs/config.html</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
@@ -207,16 +207,6 @@
                 <stringProp name="Argument.value">1</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
-              <elementProp name="max.in.flight.requests.per.connection" elementType="Argument">
-                <stringProp name="Argument.name">max.in.flight.requests.per.connection</stringProp>
-                <stringProp name="Argument.value">5</stringProp>
-                <stringProp name="Argument.metadata">=</stringProp>
-              </elementProp>
-              <elementProp name="retries" elementType="Argument">
-                <stringProp name="Argument.name">retries</stringProp>
-                <stringProp name="Argument.value">0</stringProp>
-                <stringProp name="Argument.metadata">=</stringProp>
-              </elementProp>
               <elementProp name="send.buffer.bytes" elementType="Argument">
                 <stringProp name="Argument.name">send.buffer.bytes</stringProp>
                 <stringProp name="Argument.value">131072</stringProp>
@@ -260,36 +250,6 @@
               <elementProp name="sasl.mechanism" elementType="Argument">
                 <stringProp name="Argument.name">sasl.mechanism</stringProp>
                 <stringProp name="Argument.value">PLAIN</stringProp>
-                <stringProp name="Argument.metadata">=</stringProp>
-              </elementProp>
-              <elementProp name="sasl.jaas.config" elementType="Argument">
-                <stringProp name="Argument.name">sasl.jaas.config</stringProp>
-                <stringProp name="Argument.value">org.apache.kafka.security.plain.PlainLoginModule required username=&quot;alice&quot; password=&quot;secret&quot;;</stringProp>
-                <stringProp name="Argument.metadata">=</stringProp>
-              </elementProp>
-              <elementProp name="ssl.enabled.protocols" elementType="Argument">
-                <stringProp name="Argument.name">ssl.enabled.protocols</stringProp>
-                <stringProp name="Argument.value">TLSv1.2</stringProp>
-                <stringProp name="Argument.metadata">=</stringProp>
-              </elementProp>
-              <elementProp name="ssl.truststore.location" elementType="Argument">
-                <stringProp name="Argument.name">ssl.truststore.location</stringProp>
-                <stringProp name="Argument.value">/replace/me/client.truststore.jks</stringProp>
-                <stringProp name="Argument.metadata">=</stringProp>
-              </elementProp>
-              <elementProp name="ssl.truststore.password" elementType="Argument">
-                <stringProp name="Argument.name">ssl.truststore.password</stringProp>
-                <stringProp name="Argument.value">&lt;replace with the correct password&gt;</stringProp>
-                <stringProp name="Argument.metadata">=</stringProp>
-              </elementProp>
-              <elementProp name="ssl.truststore.type" elementType="Argument">
-                <stringProp name="Argument.name">ssl.truststore.type</stringProp>
-                <stringProp name="Argument.value">JKS</stringProp>
-                <stringProp name="Argument.metadata">=</stringProp>
-              </elementProp>
-              <elementProp name="generate.per-thread.topics" elementType="Argument">
-                <stringProp name="Argument.name">generate.per-thread.topics</stringProp>
-                <stringProp name="Argument.value">NO</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>
