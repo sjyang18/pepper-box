@@ -19,6 +19,7 @@
  */
 
 
+import groovy.json.JsonSlurper
 import org.apache.jmeter.samplers.SampleResult
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.clients.consumer.ConsumerRecords

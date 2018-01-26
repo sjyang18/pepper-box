@@ -69,13 +69,13 @@
           </elementProp>
           <elementProp name="ssl.truststore.location" elementType="Argument">
             <stringProp name="Argument.name">ssl.truststore.location</stringProp>
-            <stringProp name="Argument.value">${__P(sasl.truststore.location,)}</stringProp>
+            <stringProp name="Argument.value">${__P(ssl.truststore.location,)}</stringProp>
             <stringProp name="Argument.desc">This needs to match the server&apos;s configuration</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="ssl.truststore.password" elementType="Argument">
             <stringProp name="Argument.name">ssl.truststore.password</stringProp>
-            <stringProp name="Argument.value">${__P(sasl.truststore.password,)}</stringProp>
+            <stringProp name="Argument.value">${__P(ssl.truststore.password,)}</stringProp>
             <stringProp name="Argument.desc">This needs to match your client&apos;s configuration</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
