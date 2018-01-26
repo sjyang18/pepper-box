@@ -155,7 +155,7 @@ while (System.currentTimeMillis()<end)
        prevMessageId = messageId;
        sampleResult.sampleEnd();
 
-       globalResult.storeSubResult(sampleResult);
+       globalResult.addSubResult(sampleResult);
 
        p.println( "{\n\"received\":{\n\t\"batchReceivedAt\":" + System.currentTimeMillis() + ",\n\t\"offset\":" + record.offset() +"\n} \n\"generated\":" + record.value() + "\n}");
        end = System.currentTimeMillis() + WAITING_PERIOD  // increment the how long to wait for more data time
@@ -196,4 +196,5 @@ def getParam(String paramName, boolean required = false, fallbackValue = null, c
     }
 }
 
-return globalResult;
+globalResult.sampleEnd()
+return globalResult
