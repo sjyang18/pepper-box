@@ -130,13 +130,13 @@ long t = System.currentTimeMillis();
 long end = t + WAITING_PERIOD;
 String results_filename = "results-" + counter + ".csv"
 log.info("Creating file [" + results_filename + "]");
-f = new FileOutputStream(results_filename, true);
+f = new FileOutputStream(results_filename, true)
 p = new PrintStream(f);
-p.println("batchReceived,messageGenerated,messageId,recordOffset")
+p.println("batchReceived,messageGenerated,messageId,recordOffset");
 long prevMessageId;
 while (System.currentTimeMillis()<end)
 {
-    Long batchReceived = System.currentTimeMillis()
+    Long batchReceived = System.currentTimeMillis();
     ConsumerRecords<String, String> records = consumer.poll(100);
     for (ConsumerRecord<String, String> record : records)
     {
@@ -150,10 +150,10 @@ while (System.currentTimeMillis()<end)
            sampleResult.setResponseData(record.value(), StandardCharsets.UTF_8.name());
            sampleResult.setSuccessful(true);
        } else {
-           log.warn("Messages were not contiguous. [prevMessageId="+prevMessageId+"] [thisMessageId="+messageId+"]")
-           OUT.println("WARN - Messages were not contiguous. [prevMessageId=\"+prevMessageId+\"] [thisMessageId=\"+messageId+\"]")
-           sampleResult.setResponseData(record.value(), StandardCharsets.UTF_8.name())
-           sampleResult.setSuccessful(false)
+           log.warn("Messages were not contiguous. [prevMessageId="+prevMessageId+"] [thisMessageId="+messageId+"]");
+           //OUT.println("WARN - Messages were not contiguous. [prevMessageId="+prevMessageId+"] [thisMessageId="+messageId+"]")
+           sampleResult.setResponseData(record.value(), StandardCharsets.UTF_8.name());
+           sampleResult.setSuccessful(false);
        }
 
        prevMessageId = messageId;
@@ -163,13 +163,13 @@ while (System.currentTimeMillis()<end)
 
        p.println(batchReceived + "," + result.messageTime, + "," + result.messageId + "," + record.offset());
        //p.println( "{\n\"received\":{\n\t\"batchReceivedAt\":" + System.currentTimeMillis() + ",\n\t\"offset\":" + record.offset() +"\n} \n\"generated\":" + record.value() + "\n}");
-       end = System.currentTimeMillis() + WAITING_PERIOD  // increment the how long to wait for more data time
+       end = System.currentTimeMillis() + WAITING_PERIOD;  // increment the how long to wait for more data time
    }
-   consumer.commitSync()
+   consumer.commitSync();
 }
-consumer.close()
-p.close()
-f.close()
+consumer.close();
+p.close();
+f.close();
 
 
 def getParam(String paramName, boolean required = false, fallbackValue = null, castType = 'string'){
@@ -201,5 +201,5 @@ def getParam(String paramName, boolean required = false, fallbackValue = null, c
     }
 }
 
-globalResult.sampleEnd()
-return globalResult
+globalResult.sampleEnd();
+return globalResult;
