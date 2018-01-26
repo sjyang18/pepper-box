@@ -95,6 +95,11 @@
             <stringProp name="Argument.value">${__P(message.placeholder.key, JSON450)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
+          <elementProp name="generate.per-thread.topics" elementType="Argument">
+            <stringProp name="Argument.name">generate.per-thread.topics</stringProp>
+            <stringProp name="Argument.value">YES</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
         </collectionProp>
         <stringProp name="TestPlan.comments">These variables will be used by both producer and consumer</stringProp>
       </Arguments>
@@ -282,7 +287,7 @@
               </elementProp>
               <elementProp name="generate.per-thread.topics" elementType="Argument">
                 <stringProp name="Argument.name">generate.per-thread.topics</stringProp>
-                <stringProp name="Argument.value">YES</stringProp>
+                <stringProp name="Argument.value">${generate.per-thread.topics}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>

@@ -30,7 +30,7 @@ import java.nio.charset.StandardCharsets
 
 String bootstrap_servers = getParam("bootstrap.servers", true)
 String topic = getParam("topic", true)
-String generate_per_thread_topics = getParam("per.thread.topicnames", false, false)
+String generate_per_thread_topics = getParam("generate.per-thread.topics", false, false)
 String threadz = getParam("threadz", true, 5, 'integer')
 Integer counter = Integer.valueOf(args[0]) % Integer.valueOf(threadz)
 
