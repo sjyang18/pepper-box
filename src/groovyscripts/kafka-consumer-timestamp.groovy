@@ -18,10 +18,14 @@
  * working on. YMMV. Improvements are welcome.
  */
 
+
+import org.apache.jmeter.samplers.SampleResult
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.protocol.SecurityProtocol
+
+import java.nio.charset.StandardCharsets
 
 String bootstrap_servers = getParam("bootstrap.servers", true)
 String topic = getParam("topic", true)
@@ -117,19 +121,43 @@ if (generate_per_thread_topics?.trim() && generate_per_thread_topics.equalsIgnor
     log.info("Subscribed to common topic:" + topic)
 }
 
+SampleResult globalResult = new SampleResult();
+
+def jsonSlurper = new JsonSlurper();
 long t = System.currentTimeMillis();
 long end = t + WAITING_PERIOD;
 String results_filename = "results-" + counter + ".json"
 log.info("Creating file [" + results_filename + "]");
 f = new FileOutputStream(results_filename, true);
 p = new PrintStream(f);
+long prevMessageId = null;
 while (System.currentTimeMillis()<end)
 {
    ConsumerRecords<String, String> records = consumer.poll(100);
    for (ConsumerRecord<String, String> record : records)
    {
-      p.println( "{\n\"received\":{\n\t\"batchReceivedAt\":" + System.currentTimeMillis() + ",\n\t\"offset\":" + record.offset() +"\n} \n\"generated\":" + record.value() + "\n}");
-      end = System.currentTimeMillis() + WAITING_PERIOD  // increment the how long to wait for more data time
+
+       SampleResult sampleResult = new SampleResult();
+       sampleResult.sampleStart();
+
+       def result = jsonSlurper.parseText(record.value());
+       Long messageId = result.messageId;
+       if(prevMessageId == null || messageId == prevMessageId+1) {
+           sampleResult.setResponseData(record.value(), StandardCharsets.UTF_8.name());
+           sampleResult.setSuccessful(true);
+       } else {
+           log.warn("Messages were not contiguous. [prevMessageId="+prevMessageId+"] [thisMessageId="+messageId+"]");
+           sampleResult.setResponseData(record.value(), StandardCharsets.UTF_8.name());
+           sampleResult.setSuccessful(false);
+       }
+
+       prevMessageId = messageId;
+       sampleResult.sampleEnd();
+
+       globalResult.addSubResult(sampleResult);
+
+       p.println( "{\n\"received\":{\n\t\"batchReceivedAt\":" + System.currentTimeMillis() + ",\n\t\"offset\":" + record.offset() +"\n} \n\"generated\":" + record.value() + "\n}");
+       end = System.currentTimeMillis() + WAITING_PERIOD  // increment the how long to wait for more data time
    }
    consumer.commitSync()
 }
@@ -166,3 +194,5 @@ def getParam(String paramName, boolean required = false, fallbackValue = null, c
         }
     }
 }
+
+return globalResult;
