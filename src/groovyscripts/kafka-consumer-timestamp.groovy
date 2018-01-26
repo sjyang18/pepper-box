@@ -155,7 +155,7 @@ while (System.currentTimeMillis()<end)
        prevMessageId = messageId;
        sampleResult.sampleEnd();
 
-       globalResult.addSubResult(sampleResult);
+       globalResult.storeSubResult(sampleResult);
 
        p.println( "{\n\"received\":{\n\t\"batchReceivedAt\":" + System.currentTimeMillis() + ",\n\t\"offset\":" + record.offset() +"\n} \n\"generated\":" + record.value() + "\n}");
        end = System.currentTimeMillis() + WAITING_PERIOD  // increment the how long to wait for more data time
