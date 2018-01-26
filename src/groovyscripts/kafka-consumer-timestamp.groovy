@@ -30,7 +30,7 @@ import java.nio.charset.StandardCharsets
 
 String bootstrap_servers = getParam("bootstrap.servers", true)
 String topic = getParam("topic", true)
-String generate_per_thread_topics = getParam("generate.per-thread.topics", false, false)
+String generate_per_thread_topics = getParam("generate.per-thread.topics", false, "YES")
 String threadz = getParam("threadz", true, 5, 'integer')
 Integer counter = Integer.valueOf(args[0]) % Integer.valueOf(threadz)
 
@@ -161,7 +161,7 @@ while (System.currentTimeMillis()<end)
 
        globalResult.addSubResult(sampleResult);
 
-       p.println(batchReceived + "," + result.messageTime, + "," + result.messageId + "," + record.offset());
+       p.println("" + batchReceived.toString() + "," + result.messageTime.toString() + "," + result.messageId.toString() + "," + record.offset().toString());
        //p.println( "{\n\"received\":{\n\t\"batchReceivedAt\":" + System.currentTimeMillis() + ",\n\t\"offset\":" + record.offset() +"\n} \n\"generated\":" + record.value() + "\n}");
        end = System.currentTimeMillis() + WAITING_PERIOD  // increment the how long to wait for more data time
    }
