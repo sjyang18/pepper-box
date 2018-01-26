@@ -10,6 +10,11 @@
 .idea/**/tasks.xml
 .idea/dictionaries
 
+# These seem to be created automatically and don't seem worth maintaining in git as Intellij got confused by them arriving.
+.idea/vcs.xml
+.idea/misc.xml
+dependency-reduced-pom.xml
+
 # Sensitive or high-churn files:
 .idea/**/dataSources/
 .idea/**/dataSources.ids
