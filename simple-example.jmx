@@ -262,7 +262,7 @@
               </elementProp>
               <elementProp name="sasl.jaas.config" elementType="Argument">
                 <stringProp name="Argument.name">sasl.jaas.config</stringProp>
-                <stringProp name="Argument.value">org.apache.kafka.security.plain.PlainLoginModule required username=&quot;alice&quot; password=&quot;secret&quot;;</stringProp>
+		<stringProp name="Argument.value">org.apache.kafka.common.security.plain.PlainLoginModule required username=&quot;${sasl.jaas.username}&quot; password=&quot;${sasl.jaas.password}&quot;;</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="ssl.enabled.protocols" elementType="Argument">
