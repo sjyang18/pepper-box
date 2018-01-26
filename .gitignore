@@ -95,3 +95,7 @@ pepper-box.iml
 .idea/modules.xml
 
 # End of https://www.gitignore.io/api/java,intellij
+
+
+results-*
+target/*

@@ -6,13 +6,7 @@
       <boolProp name="TestPlan.functional_mode">false</boolProp>
       <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
       <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
-        <collectionProp name="Arguments.arguments">
-          <elementProp name="threadz" elementType="Argument">
-            <stringProp name="Argument.name">threadz</stringProp>
-            <stringProp name="Argument.value">5</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
-        </collectionProp>
+        <collectionProp name="Arguments.arguments"/>
       </elementProp>
       <stringProp name="TestPlan.user_define_classpath"></stringProp>
     </TestPlan>
@@ -21,19 +15,19 @@
         <collectionProp name="Arguments.arguments">
           <elementProp name="bootstrap.servers" elementType="Argument">
             <stringProp name="Argument.name">bootstrap.servers</stringProp>
-            <stringProp name="Argument.value">${__P(bootstrapservers,localhost:9092)}</stringProp>
+            <stringProp name="Argument.value">${__P(bootstrap.servers,localhost:9092)}</stringProp>
             <stringProp name="Argument.desc">One or more of the Kafka nodes as per https://docs.confluent.io/current/kafka-rest/docs/config.html</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="zookeeper.servers" elementType="Argument">
             <stringProp name="Argument.name">zookeeper.servers</stringProp>
-            <stringProp name="Argument.value">${__P(zookeeperservers,localhost:2181)}</stringProp>
+            <stringProp name="Argument.value">${__P(zookeeper.servers,localhost:2181)}</stringProp>
             <stringProp name="Argument.desc">One or more Zookeeper servers as per https://docs.confluent.io/current/kafka-rest/docs/config.html</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="topic" elementType="Argument">
             <stringProp name="Argument.name">topic</stringProp>
-            <stringProp name="Argument.value">pepperbox-test</stringProp>
+            <stringProp name="Argument.value">${__P(topic, pepperbox-test)}</stringProp>
             <stringProp name="Argument.desc">The name of the topic to use. Where per-thread topics are enabled this will be used as the prefix</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
@@ -45,25 +39,25 @@
           </elementProp>
           <elementProp name="security.protocol" elementType="Argument">
             <stringProp name="Argument.name">security.protocol</stringProp>
-            <stringProp name="Argument.value">PLAINTEXT</stringProp>
+            <stringProp name="Argument.value">${__P(security.protocol, PLAINTEXT)}</stringProp>
             <stringProp name="Argument.desc">Set as per https://docs.confluent.io/current/kafka-rest/docs/config.html</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="sasl.jaas.username" elementType="Argument">
             <stringProp name="Argument.name">sasl.jaas.username</stringProp>
-            <stringProp name="Argument.value">user</stringProp>
+            <stringProp name="Argument.value">${__P(sasl.jaas.username, user)}</stringProp>
             <stringProp name="Argument.desc">This needs to match the server&apos;s configuration</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="sasl.jaas.password" elementType="Argument">
             <stringProp name="Argument.name">sasl.jaas.password</stringProp>
-            <stringProp name="Argument.value">replace.me</stringProp>
+            <stringProp name="Argument.value">${__P(sasl.jaas.password, password)}</stringProp>
             <stringProp name="Argument.desc">This needs to match the server&apos;s configuration</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="sasl.mechanism" elementType="Argument">
             <stringProp name="Argument.name">sasl.mechanism</stringProp>
-            <stringProp name="Argument.value">PLAIN</stringProp>
+            <stringProp name="Argument.value">${__P(sasl.mechanism, PLAIN)}</stringProp>
             <stringProp name="Argument.desc">This needs to match the server&apos;s configuration</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
@@ -75,13 +69,13 @@
           </elementProp>
           <elementProp name="ssl.truststore.location" elementType="Argument">
             <stringProp name="Argument.name">ssl.truststore.location</stringProp>
-            <stringProp name="Argument.value">/replace.me/client.truststore.jks</stringProp>
+            <stringProp name="Argument.value">${__P(sasl.truststore.location,)}</stringProp>
             <stringProp name="Argument.desc">This needs to match the server&apos;s configuration</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="ssl.truststore.password" elementType="Argument">
             <stringProp name="Argument.name">ssl.truststore.password</stringProp>
-            <stringProp name="Argument.value">replace.me.too</stringProp>
+            <stringProp name="Argument.value">${__P(sasl.truststore.password,)}</stringProp>
             <stringProp name="Argument.desc">This needs to match your client&apos;s configuration</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
@@ -94,6 +88,11 @@
           <elementProp name="iterationz" elementType="Argument">
             <stringProp name="Argument.name">iterationz</stringProp>
             <stringProp name="Argument.value">${__P(iterationz, 7)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="message.placeholder.key" elementType="Argument">
+            <stringProp name="Argument.name">message.placeholder.key</stringProp>
+            <stringProp name="Argument.value">${__P(message.placeholder.key, JSON450)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
         </collectionProp>
@@ -223,12 +222,12 @@
               </elementProp>
               <elementProp name="security.protocol" elementType="Argument">
                 <stringProp name="Argument.name">security.protocol</stringProp>
-                <stringProp name="Argument.value">PLAINTEXT</stringProp>
+                <stringProp name="Argument.value">${security.protocol}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="message.placeholder.key" elementType="Argument">
                 <stringProp name="Argument.name">message.placeholder.key</stringProp>
-                <stringProp name="Argument.value">MESSAGE</stringProp>
+                <stringProp name="Argument.value">${message.placeholder.key}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="kerberos.auth.enabled" elementType="Argument">
@@ -253,7 +252,7 @@
               </elementProp>
               <elementProp name="sasl.mechanism" elementType="Argument">
                 <stringProp name="Argument.name">sasl.mechanism</stringProp>
-                <stringProp name="Argument.value">PLAIN</stringProp>
+                <stringProp name="Argument.value">${sasl.mechanism}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="sasl.jaas.config" elementType="Argument">
@@ -268,17 +267,17 @@
               </elementProp>
               <elementProp name="ssl.truststore.location" elementType="Argument">
                 <stringProp name="Argument.name">ssl.truststore.location</stringProp>
-                <stringProp name="Argument.value">/replace/me/client.truststore.jks</stringProp>
+                <stringProp name="Argument.value">${ssl.truststore.location}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="ssl.truststore.password" elementType="Argument">
                 <stringProp name="Argument.name">ssl.truststore.password</stringProp>
-                <stringProp name="Argument.value">&lt;replace with the correct password&gt;</stringProp>
+                <stringProp name="Argument.value">${ssl.truststore.password}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="ssl.truststore.type" elementType="Argument">
                 <stringProp name="Argument.name">ssl.truststore.type</stringProp>
-                <stringProp name="Argument.value">JKS</stringProp>
+                <stringProp name="Argument.value">${ssl.truststore.type}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="generate.per-thread.topics" elementType="Argument">
@@ -291,7 +290,7 @@
           <stringProp name="classname">com.gslab.pepper.sampler.PepperBoxKafkaSampler</stringProp>
         </JavaSampler>
         <hashTree/>
-        <com.gslab.pepper.config.plaintext.PlainTextConfigElement guiclass="TestBeanGUI" testclass="com.gslab.pepper.config.plaintext.PlainTextConfigElement" testname="Pepper-Box PlainText Config" enabled="true">
+        <com.gslab.pepper.config.plaintext.PlainTextConfigElement guiclass="TestBeanGUI" testclass="com.gslab.pepper.config.plaintext.PlainTextConfigElement" testname="JSON450" enabled="true">
           <stringProp name="jsonSchema">{
   &quot;messageId&quot;:{{SEQUENCE(&quot;messageId&quot;, 1, 1)}},
   &quot;messageBody&quot;:&quot;{{RANDOM_ALPHA_NUMERIC(&quot;abcedefghijklmnopqrwxyzABCDEFGHIJKLMNOPQRWXYZ&quot;, 450)}}&quot;,
@@ -300,7 +299,31 @@
   &quot;messageTime&quot;:{{TIMESTAMP()}}
 }
 </stringProp>
-          <stringProp name="placeHolder">MESSAGE</stringProp>
+          <stringProp name="placeHolder">JSON450</stringProp>
+        </com.gslab.pepper.config.plaintext.PlainTextConfigElement>
+        <hashTree/>
+        <com.gslab.pepper.config.plaintext.PlainTextConfigElement guiclass="TestBeanGUI" testclass="com.gslab.pepper.config.plaintext.PlainTextConfigElement" testname="JSON10000" enabled="true">
+          <stringProp name="jsonSchema">{
+  &quot;messageId&quot;:{{SEQUENCE(&quot;messageId&quot;, 1, 1)}},
+  &quot;messageBody&quot;:&quot;{{RANDOM_ALPHA_NUMERIC(&quot;abcedefghijklmnopqrwxyzABCDEFGHIJKLMNOPQRWXYZ&quot;, 10000)}}&quot;,
+  &quot;messageCategory&quot;:&quot;{{RANDOM_STRING(&quot;Finance&quot;, &quot;Insurance&quot;, &quot;Healthcare&quot;, &quot;Shares&quot;)}}&quot;,
+  &quot;messageStatus&quot;:&quot;{{RANDOM_STRING(&quot;Accepted&quot;,&quot;Pending&quot;,&quot;Processing&quot;,&quot;Rejected&quot;)}}&quot;,
+  &quot;messageTime&quot;:{{TIMESTAMP()}}
+}
+</stringProp>
+          <stringProp name="placeHolder">JSON10000</stringProp>
+        </com.gslab.pepper.config.plaintext.PlainTextConfigElement>
+        <hashTree/>
+        <com.gslab.pepper.config.plaintext.PlainTextConfigElement guiclass="TestBeanGUI" testclass="com.gslab.pepper.config.plaintext.PlainTextConfigElement" testname="JSON1000" enabled="true">
+          <stringProp name="jsonSchema">{
+  &quot;messageId&quot;:{{SEQUENCE(&quot;messageId&quot;, 1, 1)}},
+  &quot;messageBody&quot;:&quot;{{RANDOM_ALPHA_NUMERIC(&quot;abcedefghijklmnopqrwxyzABCDEFGHIJKLMNOPQRWXYZ&quot;, 1000)}}&quot;,
+  &quot;messageCategory&quot;:&quot;{{RANDOM_STRING(&quot;Finance&quot;, &quot;Insurance&quot;, &quot;Healthcare&quot;, &quot;Shares&quot;)}}&quot;,
+  &quot;messageStatus&quot;:&quot;{{RANDOM_STRING(&quot;Accepted&quot;,&quot;Pending&quot;,&quot;Processing&quot;,&quot;Rejected&quot;)}}&quot;,
+  &quot;messageTime&quot;:{{TIMESTAMP()}}
+}
+</stringProp>
+          <stringProp name="placeHolder">JSON1000</stringProp>
         </com.gslab.pepper.config.plaintext.PlainTextConfigElement>
         <hashTree/>
       </hashTree>
