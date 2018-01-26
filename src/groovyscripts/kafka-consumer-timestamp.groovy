@@ -142,7 +142,7 @@ while (System.currentTimeMillis()<end)
        sampleResult.sampleStart();
 
        def result = jsonSlurper.parseText(record.value());
-       Long messageId = result.messageId;
+       Long messageId = Long.valueOf(result.messageId);
        if(prevMessageId == null || messageId == prevMessageId+1) {
            sampleResult.setResponseData(record.value(), StandardCharsets.UTF_8.name());
            sampleResult.setSuccessful(true);
