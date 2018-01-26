@@ -123,6 +123,7 @@ if (generate_per_thread_topics?.trim() && generate_per_thread_topics.equalsIgnor
 }
 
 SampleResult globalResult = new SampleResult();
+globalResult.sampleStart();
 
 def jsonSlurper = new JsonSlurper();
 long t = System.currentTimeMillis();
