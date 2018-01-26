@@ -131,7 +131,7 @@ String results_filename = "results-" + counter + ".json"
 log.info("Creating file [" + results_filename + "]");
 f = new FileOutputStream(results_filename, true);
 p = new PrintStream(f);
-long prevMessageId = null;
+long prevMessageId;
 while (System.currentTimeMillis()<end)
 {
    ConsumerRecords<String, String> records = consumer.poll(100);
@@ -143,7 +143,7 @@ while (System.currentTimeMillis()<end)
 
        def result = jsonSlurper.parseText(record.value());
        Long messageId = Long.valueOf(result.messageId);
-       if(prevMessageId == null || messageId == prevMessageId+1) {
+       if(prevMessageId || messageId == prevMessageId+1) {
            sampleResult.setResponseData(record.value(), StandardCharsets.UTF_8.name());
            sampleResult.setSuccessful(true);
        } else {
