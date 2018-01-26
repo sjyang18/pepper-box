@@ -122,7 +122,7 @@ if (generate_per_thread_topics?.trim() && generate_per_thread_topics.equalsIgnor
     log.info("Subscribed to common topic:" + topic)
 }
 
-SampleResult globalResult = new SampleResult();
+SampleResult globalResult = sampler;
 
 def jsonSlurper = new JsonSlurper();
 long t = System.currentTimeMillis();
