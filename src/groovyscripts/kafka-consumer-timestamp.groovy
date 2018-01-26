@@ -151,7 +151,7 @@ while (System.currentTimeMillis()<end)
            sampleResult.setSuccessful(true);
        } else {
            log.warn("Messages were not contiguous. [prevMessageId="+prevMessageId+"] [thisMessageId="+messageId+"]")
-           OUT.println("WARN - Messages were not contiguous. [prevMessageId=\"+prevMessageId+\"] [thisMessageId=\"+messageId+\"]")
+           OUT.println("WARN - Messages were not contiguous. [prevMessageId="+prevMessageId+"] [thisMessageId="+messageId+"]")
            sampleResult.setResponseData(record.value(), StandardCharsets.UTF_8.name())
            sampleResult.setSuccessful(false)
        }
@@ -201,5 +201,4 @@ def getParam(String paramName, boolean required = false, fallbackValue = null, c
     }
 }
 
-globalResult.sampleEnd()
 return globalResult
