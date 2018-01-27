@@ -18,24 +18,30 @@
  * working on. YMMV. Improvements are welcome.
  */
 
+
+import groovy.json.JsonSlurper
+import org.apache.jmeter.samplers.SampleResult
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.protocol.SecurityProtocol
 
-String bootstrap_servers = vars.get("bootstrap.servers") // get or die
-String topic = vars.get("topic.name")  // get or die
-String generate_per_thread_topics = vars.get("per.thread.topicnames") // default to false
-String threadz = props.get("threadz")
+import java.nio.charset.StandardCharsets
+
+String bootstrap_servers = getParam("bootstrap.servers", true)
+String topic_prefix = getParam("topic.prefix", false, "")
+String topic = topic_prefix + getParam("topic", true)
+String generate_per_thread_topics = getParam("generate.per-thread.topics", false, "YES")
+String threadz = getParam("threadz", true, 5, 'integer')
 Integer counter = Integer.valueOf(args[0]) % Integer.valueOf(threadz)
 
-String sasl_jaas_username = vars.get("sasl.jaas.username")
-String sasl_jaas_password = vars.get("sasl.jaas.password")
-String security_protocol = vars.get("security.protocol")
-log.info("security.protocol:" + security_protocol)
+String sasl_jaas_username = getParam("sasl.jaas.username")
+String sasl_jaas_password = getParam("sasl.jaas.password")
+String security_protocol = getParam("security.protocol")
+log.info("using security.protocol:" + security_protocol)
 
-String ssl_truststore_location = vars.get("ssl.truststore.location")
-String ssl_truststore_password = vars.get("ssl.truststore.password")
+String ssl_truststore_location = getParam("ssl.truststore.location")
+String ssl_truststore_password = getParam("ssl.truststore.password")
 
 Long WAITING_PERIOD = 30000  // 30 seconds to wait for additional messages.
 
@@ -117,21 +123,92 @@ if (generate_per_thread_topics?.trim() && generate_per_thread_topics.equalsIgnor
     log.info("Subscribed to common topic:" + topic)
 }
 
-long t = System.currentTimeMillis();
-long end = t + WAITING_PERIOD;
-String results_filename = "results-" + counter + ".json"
-f = new FileOutputStream(results_filename, true);
-p = new PrintStream(f);
+SampleResult globalResult = new SampleResult();
+globalResult.sampleStart();
+
+def jsonSlurper = new JsonSlurper()
+long end = System.currentTimeMillis() + WAITING_PERIOD
+
+String results_filename = "results-" + counter + ".csv"
+log.info("Creating file [" + results_filename + "]")
+
+f = new FileOutputStream(results_filename, true)
+p = new PrintStream(f)
+p.println("batchReceived,messageGenerated,consumerLag,messageId,recordOffset")
+
+int messagesProcessed = 0
+long prevMessageId
 while (System.currentTimeMillis()<end)
 {
-   ConsumerRecords<String, String> records = consumer.poll(100);
-   for (ConsumerRecord<String, String> record : records)
-   {
-      p.println( "{\n\"received\":{\n\t\"batchReceivedAt\":" + System.currentTimeMillis() + ",\n\t\"offset\":" + record.offset() +"\n} \n\"generated\":" + record.value() + "\n}");
-      end = System.currentTimeMillis() + WAITING_PERIOD  // increment the how long to wait for more data time
+    long batchReceived = System.currentTimeMillis()
+    ConsumerRecords<String, String> records = consumer.poll(100)
+    for (ConsumerRecord<String, String> record : records)
+    {
+
+       SampleResult sampleResult = new SampleResult()
+       sampleResult.sampleStart()
+
+       def result = jsonSlurper.parseText(record.value())
+       long messageId = Long.valueOf(result.messageId)
+       if (prevMessageId || messageId == prevMessageId + 1) {
+           sampleResult.setResponseData(record.value(), StandardCharsets.UTF_8.name())
+           sampleResult.setSuccessful(true)
+       } else {
+           log.warn("Messages were not contiguous. [prevMessageId="+prevMessageId+"] [thisMessageId="+messageId+"]")
+           OUT.println("WARN - Messages were not contiguous. [prevMessageId="+prevMessageId+"] [thisMessageId="+messageId+"]")
+           sampleResult.setResponseData(record.value(), StandardCharsets.UTF_8.name())
+           sampleResult.setSuccessful(false)
+       }
+
+       sampleResult.sampleEnd()
+       globalResult.addSubResult(sampleResult)
+
+        Long consumerLag = batchReceived - result.messageTime
+
+        prevMessageId = messageId
+        messagesProcessed++
+
+       p.println("" + batchReceived.toString() + "," + result.messageTime.toString() + "," + consumerLag.toString() + "," + result.messageId.toString() + "," + record.offset().toString());
+       end = System.currentTimeMillis() + WAITING_PERIOD  // increment the how long to wait for more data time
    }
    consumer.commitSync()
 }
+globalResult.setResponseData("" + messagesProcessed + " messages processed.", StandardCharsets.UTF_8.name())
+globalResult.setSuccessful(true)
+globalResult.sampleEnd()
+
 consumer.close()
 p.close()
 f.close()
+
+
+def getParam(String paramName, boolean required = false, fallbackValue = null, castType = 'string'){
+    String val = vars.get(paramName);
+    if(val == null) {
+        if(required) {
+            log.error("InvalidArgument - Parameter [" + paramName + "] is required");
+            ctx.getEngine().stopTestImmediately();
+        }
+        log.info("CONFIG ["+paramName+"="+fallbackValue+"]");
+        return fallbackValue;
+    } else {
+        try {
+            log.info("CONFIG ["+paramName+"="+val+"]");
+            if (castType == 'string') {
+                return val;
+            } else if (castType == 'integer') {
+                return Integer.valueOf(val);
+            } else  if(castType == 'boolean') {
+                return Boolean.valueOf(val);
+            } else {
+                log.warn("InvalidArgumentType - Unexpected type ["+castType+"] for parameter ["+paramName+"] - Use one of [string,integer,boolean]");
+                return val;
+            }
+        } catch(e) {
+            log.error("InvalidArgument - Unable to cast ["+paramName+"] (["+val+"]) to a ["+castType+"]");
+            ctx.getEngine().stopTestImmediately();
+        }
+    }
+}
+
+return globalResult

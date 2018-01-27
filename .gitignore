@@ -10,6 +10,11 @@
 .idea/**/tasks.xml
 .idea/dictionaries
 
+# These seem to be created automatically and don't seem worth maintaining in git as Intellij got confused by them arriving.
+.idea/vcs.xml
+.idea/misc.xml
+dependency-reduced-pom.xml
+
 # Sensitive or high-churn files:
 .idea/**/dataSources/
 .idea/**/dataSources.ids
@@ -95,3 +100,7 @@ pepper-box.iml
 .idea/modules.xml
 
 # End of https://www.gitignore.io/api/java,intellij
+
+
+results-*
+target/*
