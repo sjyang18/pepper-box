@@ -29,7 +29,8 @@ import org.apache.kafka.common.protocol.SecurityProtocol
 import java.nio.charset.StandardCharsets
 
 String bootstrap_servers = getParam("bootstrap.servers", true)
-String topic = getParam("topic", true)
+String topic_prefix = getParam("topic.prefix", false, "")
+String topic = topic_prefix + getParam("topic", true)
 String generate_per_thread_topics = getParam("generate.per-thread.topics", false, "YES")
 String threadz = getParam("threadz", true, 5, 'integer')
 Integer counter = Integer.valueOf(args[0]) % Integer.valueOf(threadz)
@@ -125,30 +126,33 @@ if (generate_per_thread_topics?.trim() && generate_per_thread_topics.equalsIgnor
 SampleResult globalResult = new SampleResult();
 globalResult.sampleStart();
 
-def jsonSlurper = new JsonSlurper();
-long t = System.currentTimeMillis();
-long end = t + WAITING_PERIOD;
+def jsonSlurper = new JsonSlurper()
+long end = System.currentTimeMillis() + WAITING_PERIOD
+
 String results_filename = "results-" + counter + ".csv"
-log.info("Creating file [" + results_filename + "]");
-f = new FileOutputStream(results_filename, true);
-p = new PrintStream(f);
-p.println("batchReceived,messageGenerated,messageId,recordOffset")
-long prevMessageId;
+log.info("Creating file [" + results_filename + "]")
+
+f = new FileOutputStream(results_filename, true)
+p = new PrintStream(f)
+p.println("batchReceived,messageGenerated,consumerLag,messageId,recordOffset")
+
+int messagesProcessed = 0
+long prevMessageId
 while (System.currentTimeMillis()<end)
 {
     long batchReceived = System.currentTimeMillis()
-    ConsumerRecords<String, String> records = consumer.poll(100);
+    ConsumerRecords<String, String> records = consumer.poll(100)
     for (ConsumerRecord<String, String> record : records)
     {
 
-       SampleResult sampleResult = new SampleResult();
-       sampleResult.sampleStart();
+       SampleResult sampleResult = new SampleResult()
+       sampleResult.sampleStart()
 
-       def result = jsonSlurper.parseText(record.value());
-       long messageId = Long.valueOf(result.messageId);
-       if(prevMessageId || messageId == prevMessageId+1) {
-           sampleResult.setResponseData(record.value(), StandardCharsets.UTF_8.name());
-           sampleResult.setSuccessful(true);
+       def result = jsonSlurper.parseText(record.value())
+       long messageId = Long.valueOf(result.messageId)
+       if (prevMessageId || messageId == prevMessageId + 1) {
+           sampleResult.setResponseData(record.value(), StandardCharsets.UTF_8.name())
+           sampleResult.setSuccessful(true)
        } else {
            log.warn("Messages were not contiguous. [prevMessageId="+prevMessageId+"] [thisMessageId="+messageId+"]")
            OUT.println("WARN - Messages were not contiguous. [prevMessageId="+prevMessageId+"] [thisMessageId="+messageId+"]")
@@ -156,17 +160,23 @@ while (System.currentTimeMillis()<end)
            sampleResult.setSuccessful(false)
        }
 
-       prevMessageId = messageId;
-       sampleResult.sampleEnd();
+       sampleResult.sampleEnd()
+       globalResult.addSubResult(sampleResult)
 
-       globalResult.addSubResult(sampleResult);
+        Long consumerLag = batchReceived - result.messageTime
 
-       p.println("" + batchReceived.toString() + "," + result.messageTime.toString() + "," + result.messageId.toString() + "," + record.offset().toString());
-       //p.println( "{\n\"received\":{\n\t\"batchReceivedAt\":" + System.currentTimeMillis() + ",\n\t\"offset\":" + record.offset() +"\n} \n\"generated\":" + record.value() + "\n}");
+        prevMessageId = messageId
+        messagesProcessed++
+
+       p.println("" + batchReceived.toString() + "," + result.messageTime.toString() + "," + consumerLag.toString() + "," + result.messageId.toString() + "," + record.offset().toString());
        end = System.currentTimeMillis() + WAITING_PERIOD  // increment the how long to wait for more data time
    }
    consumer.commitSync()
 }
+globalResult.setResponseData("" + messagesProcessed + " messages processed.", StandardCharsets.UTF_8.name())
+globalResult.setSuccessful(true)
+globalResult.sampleEnd()
+
 consumer.close()
 p.close()
 f.close()
