@@ -99,13 +99,6 @@ public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
     @Override
     public void setupTest(JavaSamplerContext context) {
 
-        try {
-            JMeterVariables jMeterVariables = new JMeterVariables();
-            log.info("zk = " + JMeterContextService.getContext().getVariables().get("zookeepers"));
-            log.info("vars(\"zookeepers\":" +jMeterVariables.get("zookeepers"));
-        } catch (Exception e) {
-            log.error("Can't get the jmeter vars", e);
-        }
         Properties props = new Properties();
 
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, getBrokerServers(context));
@@ -154,15 +147,6 @@ public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
 
         placeHolder = context.getParameter(PropsKeys.MESSAGE_PLACEHOLDER_KEY);
         topic = context.getParameter(ProducerKeys.KAFKA_TOPIC_CONFIG);
-
-        System.setProperty("A", topic);  // Seems to work but I can't find how to use it elsewhere.
-        try {
-            JMeterUtils.setProperty("B", topic);
-            log.info("Set Properties System.setProperty A and B to topic: " + topic);
-        } catch (NullPointerException npe) {
-            // This catch is needed otherwise the tests fail with the NPE
-            log.error("couldn't find JMeterUtils.");
-        }
 
         if (context.getParameter(GENERATE_PER_THREAD_TOPICS).equalsIgnoreCase("YES")) {
             topic = topic + "." + JMeterContextService.getContext().getThreadNum();
