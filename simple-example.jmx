@@ -25,6 +25,12 @@
             <stringProp name="Argument.desc">One or more Zookeeper servers as per https://docs.confluent.io/current/kafka-rest/docs/config.html</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
+          <elementProp name="topic.prefix" elementType="Argument">
+            <stringProp name="Argument.name">topic.prefix</stringProp>
+            <stringProp name="Argument.value">${__P(topic.prefix,)}</stringProp>
+            <stringProp name="Argument.desc">Optional prefix used by the consumer</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
           <elementProp name="topic" elementType="Argument">
             <stringProp name="Argument.name">topic</stringProp>
             <stringProp name="Argument.value">${__P(topic, pepperbox-test)}</stringProp>
@@ -36,6 +42,18 @@
             <stringProp name="Argument.value">${__P(threadz, 5)}</stringProp>
             <stringProp name="Argument.desc">The number of threads to use for each thread group. It will use a command-line setting if one is provided.</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="iterationz" elementType="Argument">
+            <stringProp name="Argument.name">iterationz</stringProp>
+            <stringProp name="Argument.value">${__P(iterationz, 7)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">Numbr of iterations for each Producer thread</stringProp>
+          </elementProp>
+          <elementProp name="message.placeholder.key" elementType="Argument">
+            <stringProp name="Argument.name">message.placeholder.key</stringProp>
+            <stringProp name="Argument.value">${__P(message.placeholder.key, JSON450)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">Selects which message generator to use</stringProp>
           </elementProp>
           <elementProp name="security.protocol" elementType="Argument">
             <stringProp name="Argument.name">security.protocol</stringProp>
@@ -85,20 +103,11 @@
             <stringProp name="Argument.desc">This needs to match your client&apos;s configuration</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
-          <elementProp name="iterationz" elementType="Argument">
-            <stringProp name="Argument.name">iterationz</stringProp>
-            <stringProp name="Argument.value">${__P(iterationz, 7)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
-          <elementProp name="message.placeholder.key" elementType="Argument">
-            <stringProp name="Argument.name">message.placeholder.key</stringProp>
-            <stringProp name="Argument.value">${__P(message.placeholder.key, JSON450)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
           <elementProp name="generate.per-thread.topics" elementType="Argument">
             <stringProp name="Argument.name">generate.per-thread.topics</stringProp>
             <stringProp name="Argument.value">YES</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">Create a distinct topic name per thread</stringProp>
           </elementProp>
         </collectionProp>
         <stringProp name="TestPlan.comments">These variables will be used by both producer and consumer</stringProp>
@@ -262,7 +271,7 @@
               </elementProp>
               <elementProp name="sasl.jaas.config" elementType="Argument">
                 <stringProp name="Argument.name">sasl.jaas.config</stringProp>
-		<stringProp name="Argument.value">org.apache.kafka.common.security.plain.PlainLoginModule required username=&quot;${sasl.jaas.username}&quot; password=&quot;${sasl.jaas.password}&quot;;</stringProp>
+                <stringProp name="Argument.value">org.apache.kafka.common.security.plain.PlainLoginModule required username=&quot;${sasl.jaas.username}&quot; password=&quot;${sasl.jaas.password}&quot;;</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="ssl.enabled.protocols" elementType="Argument">
