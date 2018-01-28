@@ -101,7 +101,7 @@ public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
 
         Properties props = new Properties();
 
-        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, getBrokerServers(context));
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, context.getParameter(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG));
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, context.getParameter(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG));
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, context.getParameter(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG));
         props.put(ProducerConfig.ACKS_CONFIG, context.getParameter(ProducerConfig.ACKS_CONFIG));
@@ -193,6 +193,17 @@ public class PepperBoxKafkaSampler extends AbstractJavaSamplerClient {
         producer.close();
     }
 
+    /**
+     getBrokerServers aims to obtain the details of the Kafka brokers from Zookeeper.
+
+     Currently it relies on legacy behaviour, it fails to parse and fails to obtain
+     details of Kafka nodes when they're configured to use secure connections. See
+     https://github.com/commercetest/pepper-box/issues/2 for more details.
+
+     It's not needed when communicating with newer releases of Kafka. I've
+     commented-out the call and using the user-supplied details directly. To decide
+     if this is worth enhancing or deleting.
+     */
     private String getBrokerServers(JavaSamplerContext context) {
 
         StringBuilder kafkaBrokers = new StringBuilder();
