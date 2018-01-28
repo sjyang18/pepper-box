@@ -1,6 +1,9 @@
 /**
  * A Kafka consumer which adds a timestamp to each received-message.
  *
+ * The script calculates the delay between when the message was generated and
+ * when it was received.
+ *
  * The processing uses a micro-batch polling system so the timestamp
  * includes a subset of the polling interval as well as the main processing/
  * propagation time intrinsic to the Kafka subsystem.
@@ -17,7 +20,6 @@
  * The support for SASL_SSL is based on the immediate needs of the project I'm
  * working on. YMMV. Improvements are welcome.
  */
-
 
 import groovy.json.JsonSlurper
 import org.apache.jmeter.samplers.SampleResult
@@ -98,22 +100,10 @@ if (security_protocol == SecurityProtocol.SASL_SSL.name) {
     props.put("ssl.truststore.type", "JKS")
 }
 
-/*
-        final String security_protocol = context.getParameter(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG);
-        log.info("security_protocol set to[" + security_protocol + "], comparing to [" + SecurityProtocol.SASL_SSL.name +"].");
-        if (security_protocol.equals(SecurityProtocol.SASL_SSL.name)) {
-            log.info("Adding SASL_SSL parameters for Kafka to use.");
-            props.put(ProducerKeys.SASL_JAAS_CONFIG, context.getParameter(ProducerKeys.SASL_JAAS_CONFIG));
-            props.put(ProducerKeys.SASL_MECHANISM, context.getParameter(ProducerKeys.SASL_MECHANISM));
-
-            props.put(ProducerKeys.SSL_ENABLED_PROTOCOLS, context.getParameter(ProducerKeys.SSL_ENABLED_PROTOCOLS));
-            props.put(ProducerKeys.SSL_TRUSTSTORE_LOCATION, context.getParameter(ProducerKeys.SSL_TRUSTSTORE_LOCATION));
-            props.put(ProducerKeys.SSL_TRUSTSTORE_PASSWORD, context.getParameter(ProducerKeys.SSL_TRUSTSTORE_PASSWORD));
-            props.put(ProducerKeys.SSL_TRUSTSTORE_TYPE, context.getParameter(ProducerKeys.SSL_TRUSTSTORE_TYPE));
- */
-
+// Here's where the Kafka Consumer is created, using the properties we've set earlier.
 KafkaConsumer<String, String> consumer = new KafkaConsumer<String, String>(props)
 
+// Here we decide whether to listen to distinct topics or a shared topic.
 if (generate_per_thread_topics?.trim() && generate_per_thread_topics.equalsIgnoreCase("yes")) {
     thread_topic_name = topic + "." + counter
     consumer.subscribe(Arrays.asList(thread_topic_name))
@@ -123,8 +113,12 @@ if (generate_per_thread_topics?.trim() && generate_per_thread_topics.equalsIgnor
     log.info("Subscribed to common topic:" + topic)
 }
 
-SampleResult globalResult = new SampleResult();
-globalResult.sampleStart();
+// This is the way to 'tell' jmeter whether the result of this script is OK.
+// However, the script processes potentially many messages but can only provide
+// one 'result'. Therefore we use sub-results too, sadly these aren't reported
+// on by jmeter.
+SampleResult globalResult = new SampleResult()
+globalResult.sampleStart()
 
 def jsonSlurper = new JsonSlurper()
 long end = System.currentTimeMillis() + WAITING_PERIOD
@@ -142,14 +136,15 @@ while (System.currentTimeMillis()<end)
 {
     long batchReceived = System.currentTimeMillis()
     ConsumerRecords<String, String> records = consumer.poll(100)
+    log.info("" + records.count() + " messages received this time.")
     for (ConsumerRecord<String, String> record : records)
     {
-
        SampleResult sampleResult = new SampleResult()
        sampleResult.sampleStart()
 
        def result = jsonSlurper.parseText(record.value())
        long messageId = Long.valueOf(result.messageId)
+
        if (prevMessageId || messageId == prevMessageId + 1) {
            sampleResult.setResponseData(record.value(), StandardCharsets.UTF_8.name())
            sampleResult.setSuccessful(true)
