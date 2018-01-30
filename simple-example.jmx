@@ -216,12 +216,12 @@
               </elementProp>
               <elementProp name="max.in.flight.requests.per.connection" elementType="Argument">
                 <stringProp name="Argument.name">max.in.flight.requests.per.connection</stringProp>
-                <stringProp name="Argument.value">5</stringProp>
+                <stringProp name="Argument.value">1</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="retries" elementType="Argument">
                 <stringProp name="Argument.name">retries</stringProp>
-                <stringProp name="Argument.value">0</stringProp>
+                <stringProp name="Argument.value">7</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="send.buffer.bytes" elementType="Argument">
