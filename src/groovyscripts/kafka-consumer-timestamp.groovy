@@ -76,8 +76,8 @@ String group = "jmeter-consumer"
 Properties props = new Properties()
 props.put("bootstrap.servers", bootstrap_servers)
 props.put("group.id", group)
-props.put("enable.auto.commit", "true")
-props.put("auto.commit.interval.ms", "1000")
+props.put("enable.auto.commit", "false")
+props.put("auto.offset.reset", "earliest")  // start at the beginning of the topic (since it's created for us)
 props.put("session.timeout.ms", "10000")
 props.put("key.deserializer",
         "org.apache.kafka.common.serialization.StringDeserializer")
@@ -132,11 +132,20 @@ p.println("batchReceived,messageGenerated,consumerLag,messageId,recordOffset")
 
 int messagesProcessed = 0
 long prevMessageId
+int previousCount = -1  // Initialise to a value that shouldn't be returned so the first results are always shown.
 while (System.currentTimeMillis()<end)
 {
     long batchReceived = System.currentTimeMillis()
     ConsumerRecords<String, String> records = consumer.poll(100)
-    log.info("" + records.count() + " messages received this time.")
+    // First record what we received this time, if it's changed from before to keep the logs compact.
+    if (records.count() != previousCount) {
+        log.info("" + records.count() + " messages received this time.")
+        previousCount = records.count()
+    }
+
+    if (records.count() == 0) {
+        continue  // skip the rest of this loop and poll again instead.
+    }
     for (ConsumerRecord<String, String> record : records)
     {
        SampleResult sampleResult = new SampleResult()
@@ -166,7 +175,7 @@ while (System.currentTimeMillis()<end)
        p.println("" + batchReceived.toString() + "," + result.messageTime.toString() + "," + consumerLag.toString() + "," + result.messageId.toString() + "," + record.offset().toString());
        end = System.currentTimeMillis() + WAITING_PERIOD  // increment the how long to wait for more data time
    }
-   consumer.commitSync()
+   consumer.commitSync()  // Now we've processed the records, let Kafka know.
 }
 globalResult.setResponseData("" + messagesProcessed + " messages processed.", StandardCharsets.UTF_8.name())
 globalResult.setSuccessful(true)
