@@ -123,7 +123,7 @@ globalResult.sampleStart()
 def jsonSlurper = new JsonSlurper()
 long end = System.currentTimeMillis() + WAITING_PERIOD
 
-String results_filename = "results-" + counter + ".csv"
+String results_filename = "results-" + topic + "-" + counter + ".csv"
 log.info("Creating file [" + results_filename + "]")
 
 f = new FileOutputStream(results_filename, true)
