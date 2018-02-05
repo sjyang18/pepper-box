@@ -80,7 +80,7 @@ public class PepperBoxLoadGenerator extends Thread {
         limiter = RateLimiter.create(throughput);
         durationInMillis = TimeUnit.SECONDS.toMillis(duration);
         Properties brokerProps = new Properties();
-        brokerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, getBrokerServers(inputProps));
+        brokerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, inputProps.getProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG));
         brokerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, inputProps.getProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG));
         brokerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, inputProps.getProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG));
         brokerProps.put(ProducerConfig.ACKS_CONFIG, inputProps.getProperty(ProducerConfig.ACKS_CONFIG));
