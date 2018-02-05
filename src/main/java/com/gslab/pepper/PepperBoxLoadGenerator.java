@@ -16,6 +16,7 @@ import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.protocol.SecurityProtocol;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
 
@@ -48,6 +49,7 @@ public class PepperBoxLoadGenerator extends Thread {
     private KafkaProducer<String, String> producer;
     private String topic;
     private long durationInMillis;
+    private long messageCount = 0;
 
     /**
      * Start kafka load generator from input properties and schema
@@ -88,6 +90,22 @@ public class PepperBoxLoadGenerator extends Thread {
         brokerProps.put(ProducerConfig.LINGER_MS_CONFIG, inputProps.getProperty(ProducerConfig.LINGER_MS_CONFIG));
         brokerProps.put(ProducerConfig.BUFFER_MEMORY_CONFIG, inputProps.getProperty(ProducerConfig.BUFFER_MEMORY_CONFIG));
         brokerProps.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, inputProps.getProperty(ProducerConfig.COMPRESSION_TYPE_CONFIG));
+        brokerProps.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, 1);
+        brokerProps.put(ProducerConfig.RETRIES_CONFIG, 5);
+
+        final String security_protocol = inputProps.getProperty(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG);
+        System.out.println("security_protocol set to[" + security_protocol + "], comparing to [" + SecurityProtocol.SASL_SSL.name +"].");
+        if (security_protocol.equals(SecurityProtocol.SASL_SSL.name)) {
+            System.out.println("Adding SASL_SSL parameters for Kafka to use.");
+            brokerProps.put(ProducerKeys.SASL_JAAS_CONFIG, inputProps.getProperty(ProducerKeys.SASL_JAAS_CONFIG));
+            brokerProps.put(ProducerKeys.SASL_MECHANISM, inputProps.getProperty(ProducerKeys.SASL_MECHANISM));
+
+            brokerProps.put(ProducerKeys.SSL_ENABLED_PROTOCOLS, inputProps.getProperty(ProducerKeys.SSL_ENABLED_PROTOCOLS));
+            brokerProps.put(ProducerKeys.SSL_TRUSTSTORE_LOCATION, inputProps.getProperty(ProducerKeys.SSL_TRUSTSTORE_LOCATION));
+            brokerProps.put(ProducerKeys.SSL_TRUSTSTORE_PASSWORD, inputProps.getProperty(ProducerKeys.SSL_TRUSTSTORE_PASSWORD));
+            brokerProps.put(ProducerKeys.SSL_TRUSTSTORE_TYPE, inputProps.getProperty(ProducerKeys.SSL_TRUSTSTORE_TYPE));
+        }
+
 
         String kerbsEnabled = inputProps.getProperty(ProducerKeys.KERBEROS_ENABLED);
 
@@ -181,6 +199,9 @@ public class PepperBoxLoadGenerator extends Thread {
     public void sendMessage() {
         limiter.acquire();
         ProducerRecord<String, String> keyedMsg = new ProducerRecord<>(topic, iterator.next().toString());
+        if (++messageCount % 100 == 0) {
+            System.out.println(messageCount + "sent.");
+        }
         producer.send(keyedMsg);
     }
 
