@@ -194,11 +194,12 @@ public class PepperBoxLoadGenerator extends Thread {
 
     @Override
     public void run() {
-
+    
         long endTime = durationInMillis + System.currentTimeMillis();
         while (endTime > System.currentTimeMillis()) {
             sendMessage();
         }
+        System.out.println("Thread " + Thread.currentThread().getId() + ", done; messages = " + messageCount);
         producer.close();
     }
 
