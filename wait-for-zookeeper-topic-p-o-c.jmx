@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="3.2" jmeter="3.2 r1790748">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="KafkaProperties" enabled="true">
+      <stringProp name="TestPlan.comments">Exploring how we can query whether Kafka topics exist in a jmeter script</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+    </TestPlan>
+    <hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Interacting with Apache Zookeeper" enabled="true">
+        <stringProp name="TestPlan.comments">A thread-group so we can use a JSR223 script in jmeter.</stringProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <longProp name="ThreadGroup.start_time">1517509723000</longProp>
+        <longProp name="ThreadGroup.end_time">1517509723000</longProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </ThreadGroup>
+      <hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="JSR223 Sampler" enabled="true">
+          <stringProp name="cacheKey"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters">i-will-x</stringProp>
+          <stringProp name="script">import java.util.concurrent.TimeoutException
+import org.I0Itec.zkclient.ZkClient
+import org.I0Itec.zkclient.ZkConnection
+
+import kafka.admin.AdminUtils
+import kafka.utils.ZKStringSerializer$
+import kafka.utils.ZkUtils
+
+final int sessionTimeoutMs = 10 * 1000
+final int connectionTimeoutMs = 8 * 1000
+
+final String zookeeperConnect = &quot;localhost:2181&quot;
+final String topicName = args[0]
+
+ZkClient zkClient = new ZkClient(
+    zookeeperConnect,
+    sessionTimeoutMs,
+    connectionTimeoutMs,
+    ZKStringSerializer$.MODULE$)
+
+boolean isSecureKafkaCluster = false
+
+ZkUtils zkUtils = new ZkUtils(zkClient, new ZkConnection(zookeeperConnect), isSecureKafkaCluster)
+
+long WAITING_TIME = 600L
+long t0 = System.currentTimeMillis()
+long t1 = System.currentTimeMillis() + WAITING_TIME
+
+boolean topicFound = false
+int loopCounter = 0
+
+while (System.currentTimeMillis() &lt; t1 &amp;&amp; !topicFound) {
+	topicFound = AdminUtils.topicExists(zkUtils, topicName)
+	loopCounter++
+	System.sleep(loopCounter)
+	if (topicFound) {
+		log.info(&quot;Topic [&quot; + topicName + &quot;] found and exists.&quot;)
+	}
+}
+long duration = System.currentTimeMillis() - t0
+
+log.info(&quot;Topic [&quot; + topicName + &quot;] exists? &quot; + topicFound + &quot; duration: &quot; + duration + &quot; looped: &quot; + loopCounter)
+
+if (!topicFound) {
+	throw new TimeoutException(&quot;Topic:&quot; + topicName + &quot; not found within : &quot; + duration + &quot;mS&quot;)
+}
+</stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+      </hashTree>
+    </hashTree>
+    <WorkBench guiclass="WorkBenchGui" testclass="WorkBench" testname="WorkBench" enabled="true">
+      <boolProp name="WorkBench.save">true</boolProp>
+    </WorkBench>
+    <hashTree/>
+  </hashTree>
+</jmeterTestPlan>

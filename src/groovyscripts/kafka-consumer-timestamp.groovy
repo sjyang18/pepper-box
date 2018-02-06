@@ -29,14 +29,66 @@ import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.protocol.SecurityProtocol
 
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.TimeoutException
+import org.I0Itec.zkclient.ZkClient
+import org.I0Itec.zkclient.ZkConnection
+
+import kafka.admin.AdminUtils
+import kafka.utils.ZKStringSerializer$
+import kafka.utils.ZkUtils
 
 String bootstrap_servers = getParam("bootstrap.servers", true)
+String zookeeper_servers = getParam("zookeeper.servers", true)
+
 String topic_prefix = getParam("topic.prefix", false, "")
 String topic = topic_prefix + getParam("topic", true)
-String generate_per_thread_topics = getParam("generate.per-thread.topics", false, "YES")
+
 String threadz = getParam("threadz", true, 5, 'integer')
 Integer counter = Integer.valueOf(args[0]) % Integer.valueOf(threadz)
 
+// Here we decide whether to listen to distinct topics or a shared topic.
+String generate_per_thread_topics = getParam("generate.per-thread.topics", false, "YES")
+if (generate_per_thread_topics?.trim() && generate_per_thread_topics.equalsIgnoreCase("yes")) {
+    topic = topic + "." + counter
+}
+
+final int sessionTimeoutMs = 10 * 1000
+final int connectionTimeoutMs = 8 * 1000
+
+ZkClient zkClient = new ZkClient(
+        zookeeper_servers,
+        sessionTimeoutMs,
+        connectionTimeoutMs,
+        ZKStringSerializer$.MODULE$)
+
+boolean isSecureKafkaCluster = false
+
+ZkUtils zkUtils = new ZkUtils(zkClient, new ZkConnection(zookeeper_servers), isSecureKafkaCluster)
+
+long WAIT_FOR_ZOOKEEPER_TOPIC_TIME = 60000L
+long t0 = System.currentTimeMillis()
+long t1 = System.currentTimeMillis() + WAIT_FOR_ZOOKEEPER_TOPIC_TIME
+
+boolean topicFound = false
+int loopCounter = 0
+
+while (System.currentTimeMillis() < t1 && !topicFound) {
+    topicFound = AdminUtils.topicExists(zkUtils, topic)
+    loopCounter++
+    System.sleep(loopCounter)
+    if (topicFound) {
+        log.info("Topic [" + topic + "] found and exists.")
+    }
+}
+long duration = System.currentTimeMillis() - t0
+
+log.info("Topic [" + topic + "] exists? " + topicFound + " duration: " + duration + " looped: " + loopCounter)
+
+if (!topicFound) {
+    throw new TimeoutException("Topic:" + topic + " not found within : " + duration + "mS")
+}
+
+// Now deal with the security stuff
 String sasl_jaas_username = getParam("sasl.jaas.username")
 String sasl_jaas_password = getParam("sasl.jaas.password")
 String security_protocol = getParam("security.protocol")
@@ -103,15 +155,8 @@ if (security_protocol == SecurityProtocol.SASL_SSL.name) {
 // Here's where the Kafka Consumer is created, using the properties we've set earlier.
 KafkaConsumer<String, String> consumer = new KafkaConsumer<String, String>(props)
 
-// Here we decide whether to listen to distinct topics or a shared topic.
-if (generate_per_thread_topics?.trim() && generate_per_thread_topics.equalsIgnoreCase("yes")) {
-    thread_topic_name = topic + "." + counter
-    consumer.subscribe(Arrays.asList(thread_topic_name))
-    log.info("Subscribed to per thread topic:" + thread_topic_name)
-} else {
-    consumer.subscribe(Arrays.asList(topic))
-    log.info("Subscribed to common topic:" + topic)
-}
+consumer.subscribe(Arrays.asList(topic))
+log.info("Subscribed to topic:" + topic)
 
 // This is the way to 'tell' jmeter whether the result of this script is OK.
 // However, the script processes potentially many messages but can only provide

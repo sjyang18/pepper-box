@@ -105,7 +105,7 @@
           </elementProp>
           <elementProp name="generate.per-thread.topics" elementType="Argument">
             <stringProp name="Argument.name">generate.per-thread.topics</stringProp>
-            <stringProp name="Argument.value">YES</stringProp>
+            <stringProp name="Argument.value">${__P(generate.per-thread.topics, NO)</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
             <stringProp name="Argument.desc">Create a distinct topic name per thread</stringProp>
           </elementProp>
@@ -114,7 +114,7 @@
       </Arguments>
       <hashTree/>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Kafka Consumers" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
           <stringProp name="LoopController.loops">1</stringProp>
