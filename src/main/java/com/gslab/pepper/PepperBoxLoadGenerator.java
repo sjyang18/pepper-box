@@ -97,6 +97,8 @@ public class PepperBoxLoadGenerator extends Thread {
         System.out.println("security_protocol set to[" + security_protocol + "], comparing to [" + SecurityProtocol.SASL_SSL.name +"].");
         if (security_protocol.equals(SecurityProtocol.SASL_SSL.name)) {
             System.out.println("Adding SASL_SSL parameters for Kafka to use.");
+            brokerProps.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, inputProps.getProperty(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG));
+
             String sasl_jaas_config = "org.apache.kafka.common.security.plain.PlainLoginModule required" +
                     " username=\"" + inputProps.getProperty("sasl.jaas.username") +
                     "\" password=\"" + inputProps.getProperty("sasl.jaas.password") + "\";";
