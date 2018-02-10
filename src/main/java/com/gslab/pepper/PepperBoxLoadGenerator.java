@@ -54,25 +54,59 @@ public class PepperBoxLoadGenerator extends Thread {
     /**
      * Start kafka load generator from input properties and schema
      *
+     * @param threadIn the logical thread ID, starting with 0
      * @param schemaFile
      * @param producerProps
      * @param throughput
      * @param duration
      * @throws PepperBoxException
      */
-    public PepperBoxLoadGenerator(String schemaFile, String producerProps, Integer throughput, Integer duration) throws PepperBoxException {
+    PepperBoxLoadGenerator(Integer threadIn, String schemaFile, String producerProps, Integer throughput, Integer duration) throws PepperBoxException {
+        Thread t = currentThread();
+        t.setName(threadIn.toString());
 
+        Properties inputProps = new Properties();
+        String perThreadTopic = inputProps.getProperty(ProducerKeys.KAFKA_TOPIC_CONFIG) + "." + threadIn.toString();
+        inputProps.setProperty(ProducerKeys.KAFKA_TOPIC_CONFIG, perThreadTopic);
+        LOGGER.log(Level.INFO, "Thread [" + threadIn.toString() + "] using topic [" +
+                inputProps.getProperty(ProducerKeys.KAFKA_TOPIC_CONFIG) + "]");
+
+        try {
+            inputProps.load(new FileInputStream(producerProps));
+        } catch (IOException e) {
+            throw new PepperBoxException(e);
+        }
+
+        inputProps.setProperty(ProducerKeys.KAFKA_TOPIC_CONFIG, inputProps.getProperty(ProducerKeys.KAFKA_TOPIC_CONFIG)+ "." + threadIn);
+        do_it(schemaFile, throughput, duration, inputProps);
+    }
+    /**
+     * Start kafka load generator from input properties and schema
+     *
+     * @param schemaFile
+     * @param producerProps
+     * @param throughput
+     * @param duration
+     * @throws PepperBoxException
+     */
+     PepperBoxLoadGenerator(String schemaFile, String producerProps, Integer throughput, Integer duration) throws PepperBoxException {
+
+        Properties inputProps = new Properties();
+        try {
+            inputProps.load(new FileInputStream(producerProps));
+        } catch (IOException e) {
+            throw new PepperBoxException(e);
+        }
+
+        do_it(schemaFile, throughput, duration, inputProps);
+    }
+
+    private void do_it(String schemaFile, Integer throughput, Integer duration, Properties inputProps) throws PepperBoxException {
         Path path = Paths.get(schemaFile);
         try {
             String inputSchema = new String(Files.readAllBytes(path));
             SchemaProcessor schemaProcessor = new SchemaProcessor();
             iterator = schemaProcessor.getPlainTextMessageIterator(inputSchema);
-        } catch (IOException e) {
-            throw new PepperBoxException(e);
-        }
-        Properties inputProps = new Properties();
-        try {
-            inputProps.load(new FileInputStream(producerProps));
         } catch (IOException e) {
             throw new PepperBoxException(e);
         }
@@ -91,12 +125,13 @@ public class PepperBoxLoadGenerator extends Thread {
         brokerProps.put(ProducerConfig.BUFFER_MEMORY_CONFIG, inputProps.getProperty(ProducerConfig.BUFFER_MEMORY_CONFIG));
         brokerProps.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, inputProps.getProperty(ProducerConfig.COMPRESSION_TYPE_CONFIG));
         brokerProps.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, 1);
+        LOGGER.info(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION + " set to: " + 1);
         brokerProps.put(ProducerConfig.RETRIES_CONFIG, 5);
 
         final String security_protocol = inputProps.getProperty(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG);
         System.out.println("security_protocol set to[" + security_protocol + "], comparing to [" + SecurityProtocol.SASL_SSL.name +"].");
         if (security_protocol.equals(SecurityProtocol.SASL_SSL.name)) {
-            System.out.println("Adding SASL_SSL parameters for Kafka to use.");
+            LOGGER.info("Adding SASL_SSL parameters for Kafka to use.");
             brokerProps.put(ProducerKeys.SASL_JAAS_CONFIG, inputProps.getProperty(ProducerKeys.SASL_JAAS_CONFIG));
             brokerProps.put(ProducerKeys.SASL_MECHANISM, inputProps.getProperty(ProducerKeys.SASL_MECHANISM));
 
@@ -199,8 +234,8 @@ public class PepperBoxLoadGenerator extends Thread {
     public void sendMessage() {
         limiter.acquire();
         ProducerRecord<String, String> keyedMsg = new ProducerRecord<>(topic, iterator.next().toString());
-        if (++messageCount % 100 == 0) {
-            System.out.println(messageCount + "sent.");
+        if (++messageCount % 100 == 1) {
+            LOGGER.info(messageCount + " sent.");
         }
         producer.send(keyedMsg);
     }
@@ -235,6 +270,11 @@ public class PepperBoxLoadGenerator extends Thread {
                 .withRequiredArg()
                 .describedAs("producers")
                 .ofType(Integer.class);
+        // TODO 20180208 Set this to optional, once I know how to do so.
+        ArgumentAcceptingOptionSpec<String> aTopicPerThread = parser.accepts("per-thread-topics", "REQUIRED: Create a separate topic per producer")
+                .withRequiredArg()
+                .describedAs("create a topic per thread")
+                .ofType(String.class);
 
         if (args.length == 0) {
             CommandLineUtils.printUsageAndDie(parser, "Kafka console load generator.");
@@ -244,7 +284,12 @@ public class PepperBoxLoadGenerator extends Thread {
         try {
             int totalThreads = options.valueOf(threadCount);
             for (int i = 0; i < totalThreads; i++) {
-                PepperBoxLoadGenerator jsonProducer = new PepperBoxLoadGenerator(options.valueOf(schemaFile), options.valueOf(producerConfig), options.valueOf(throughput), options.valueOf(duration));
+                PepperBoxLoadGenerator jsonProducer;
+                if (options.valueOf(aTopicPerThread).equalsIgnoreCase("YES")) {
+                    jsonProducer = new PepperBoxLoadGenerator(i, options.valueOf(schemaFile), options.valueOf(producerConfig), options.valueOf(throughput), options.valueOf(duration));
+                } else {
+                    jsonProducer = new PepperBoxLoadGenerator(options.valueOf(schemaFile), options.valueOf(producerConfig), options.valueOf(throughput), options.valueOf(duration));
+                }
                 jsonProducer.start();
             }
 
