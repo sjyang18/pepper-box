@@ -132,7 +132,12 @@ public class PepperBoxLoadGenerator extends Thread {
         System.out.println("security_protocol set to[" + security_protocol + "], comparing to [" + SecurityProtocol.SASL_SSL.name +"].");
         if (security_protocol.equals(SecurityProtocol.SASL_SSL.name)) {
             LOGGER.info("Adding SASL_SSL parameters for Kafka to use.");
-            brokerProps.put(ProducerKeys.SASL_JAAS_CONFIG, inputProps.getProperty(ProducerKeys.SASL_JAAS_CONFIG));
+            brokerProps.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, security_protocol);
+            String sasl_jaas_config = "org.apache.kafka.common.security.plain.PlainLoginModule required" +
+                    " username=\"" + inputProps.getProperty("sasl.jaas.username") +
+                    "\" password=\"" + inputProps.getProperty("sasl.jaas.password") + "\";";
+            System.out.println("sasl.jaas.config: " + sasl_jaas_config);
+            brokerProps.put(ProducerKeys.SASL_JAAS_CONFIG, sasl_jaas_config);
             brokerProps.put(ProducerKeys.SASL_MECHANISM, inputProps.getProperty(ProducerKeys.SASL_MECHANISM));
 
             brokerProps.put(ProducerKeys.SSL_ENABLED_PROTOCOLS, inputProps.getProperty(ProducerKeys.SSL_ENABLED_PROTOCOLS));
@@ -223,11 +228,12 @@ public class PepperBoxLoadGenerator extends Thread {
 
     @Override
     public void run() {
-
+    
         long endTime = durationInMillis + System.currentTimeMillis();
         while (endTime > System.currentTimeMillis()) {
             sendMessage();
         }
+        System.out.println("Thread " + Thread.currentThread().getId() + ", done; messages = " + messageCount);
         producer.close();
     }
 
