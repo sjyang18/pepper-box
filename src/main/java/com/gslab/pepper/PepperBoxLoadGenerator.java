@@ -65,21 +65,16 @@ public class PepperBoxLoadGenerator extends Thread {
         Thread t = currentThread();
         t.setName(threadIn.toString());
 
-        Properties inputProps = new Properties();
+        Properties inputProps = populateProducerProps(producerProps);
+
         String perThreadTopic = inputProps.getProperty(ProducerKeys.KAFKA_TOPIC_CONFIG) + "." + threadIn.toString();
         inputProps.setProperty(ProducerKeys.KAFKA_TOPIC_CONFIG, perThreadTopic);
         LOGGER.log(Level.INFO, "Thread [" + threadIn.toString() + "] using topic [" +
                 inputProps.getProperty(ProducerKeys.KAFKA_TOPIC_CONFIG) + "]");
 
-        try {
-            inputProps.load(new FileInputStream(producerProps));
-        } catch (IOException e) {
-            throw new PepperBoxException(e);
-        }
-
-        inputProps.setProperty(ProducerKeys.KAFKA_TOPIC_CONFIG, inputProps.getProperty(ProducerKeys.KAFKA_TOPIC_CONFIG)+ "." + threadIn);
-        do_it(schemaFile, throughput, duration, inputProps);
+        createProducer(schemaFile, throughput, duration, inputProps);
     }
+
     /**
      * Start kafka load generator from input properties and schema
      *
@@ -89,19 +84,23 @@ public class PepperBoxLoadGenerator extends Thread {
      * @param duration
      * @throws PepperBoxException
      */
-     PepperBoxLoadGenerator(String schemaFile, String producerProps, Integer throughput, Integer duration) throws PepperBoxException {
+    PepperBoxLoadGenerator(String schemaFile, String producerProps, Integer throughput, Integer duration) throws PepperBoxException {
 
+        Properties inputProps = populateProducerProps(producerProps);
+        createProducer(schemaFile, throughput, duration, inputProps);
+    }
+
+    private Properties populateProducerProps(String producerProps) throws PepperBoxException {
         Properties inputProps = new Properties();
         try {
             inputProps.load(new FileInputStream(producerProps));
         } catch (IOException e) {
             throw new PepperBoxException(e);
         }
-
-        do_it(schemaFile, throughput, duration, inputProps);
+        return inputProps;
     }
 
-    private void do_it(String schemaFile, Integer throughput, Integer duration, Properties inputProps) throws PepperBoxException {
+    private void createProducer(String schemaFile, Integer throughput, Integer duration, Properties inputProps) throws PepperBoxException {
         Path path = Paths.get(schemaFile);
         try {
             String inputSchema = new String(Files.readAllBytes(path));
