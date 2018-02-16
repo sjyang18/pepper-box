@@ -9,13 +9,13 @@ Pepper-Box is kafka load generator plugin for jmeter. It allows to send kafka me
 ## Getting Started
 ___
 
-Pepper-Box includes four main components
+Pepper-Box includes five main components
 
 * **PepperBoxKafkaSampler** : This is jmeter java sampler sends messages to kafka.
 * **Pepper-Box PlainText Config** : This jmeter config element generates plaintext messages based on input schema template designed.
 * **Pepper-Box Serialized Config** : This jmeter config element generates serialized object messages based on input class and its property configurations.
 * **PepperBoxLoadGenerator** : This is standalone utility which can be used without jmeter.
-
+* **PepperBoxLoadConsumer** : This is another standalone utility that consumes messages written by either the Sampler or the Load Generator.
 ### Setup
 ___
 
@@ -197,6 +197,13 @@ public class Message  implements Serializable{
 
 **Please make sure that function return type and field data type should be compatible with each other.**
 
+### PepperBoxLoadConsumer
+is a partner to the LoadGenerator. It currently expects the messages will be in JSON format and use the structure and content shown in various examples. 
+
+Example command-line:
+```
+java -cp target/pepper-box-1.0.jar:. com.gslab.pepper.PepperBoxLoadConsumer --consumer-config-file pblg.properties --num-consumers 5 --per-thread-topics YES --test-duration 30 --throughput-per-consumer 10
+```
 ### PepperBoxLoadGenerator
 
 PepperBoxLoadGenerator is console plaintext load generation utility.
