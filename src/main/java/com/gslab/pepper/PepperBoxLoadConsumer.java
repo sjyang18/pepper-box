@@ -9,8 +9,9 @@ import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 import kafka.utils.CommandLineUtils;
 
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
+import java.lang.reflect.Array;
+import java.util.Arrays;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -18,6 +19,12 @@ import java.util.logging.Logger;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import com.gslab.pepper.exception.PepperBoxException;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import org.xbill.DNS.DNSSEC;
 
 /**
@@ -33,26 +40,30 @@ import org.xbill.DNS.DNSSEC;
 public class PepperBoxLoadConsumer extends Thread {
     private long durationInMillis;
     private RateLimiter limiter;
-    private static String PEPPERBOX_GROUP_NAME = "pepperbox_loadgenerator";
+    KafkaConsumer<String, String> kafkaConsumer;
+    String perThreadTopic;
 
+    private static String PEPPERBOX_GROUP_NAME = "pepperbox_loadgenerator";
+    private static Long POLLING_INTERVAL = 100L;
     private static Logger LOGGER = Logger.getLogger(PepperBoxLoadConsumer.class.getName());
 
     PepperBoxLoadConsumer(Integer threadId, String consumerConfig, Integer throughput, Integer duration) throws PepperBoxException {
         Thread t = currentThread();
         t.setName(threadId.toString());
 
-        Properties inputProps = populateConsumerProperties(consumerConfig);
+        Properties kafkaProperties = populateConsumerProperties(consumerConfig);
 
-        String perThreadTopic = inputProps.getProperty(ConsumerKeys.KAFKA_TOPIC_CONFIG) + "." + threadId.toString();
-        inputProps.setProperty(ConsumerKeys.KAFKA_TOPIC_CONFIG, perThreadTopic);
+        perThreadTopic = kafkaProperties.getProperty(ConsumerKeys.KAFKA_TOPIC_CONFIG) + "." + threadId.toString();
+        kafkaProperties.setProperty(ConsumerKeys.KAFKA_TOPIC_CONFIG, perThreadTopic);
         LOGGER.log(Level.INFO, "Thread [" + threadId.toString() + "] using topic [" +
-                inputProps.getProperty(ConsumerKeys.KAFKA_TOPIC_CONFIG) + "]");
+                kafkaProperties.getProperty(ConsumerKeys.KAFKA_TOPIC_CONFIG) + "]");
 
-        createConsumer(inputProps, throughput, duration);
+        createConsumer(kafkaProperties, throughput, duration);
     }
 
     PepperBoxLoadConsumer(String consumerConfig, Integer throughput, Integer duration) throws PepperBoxException {
         Properties kafkaProperties = populateConsumerProperties(consumerConfig);
+        perThreadTopic = kafkaProperties.getProperty(ConsumerKeys.KAFKA_TOPIC_CONFIG);
         createConsumer(kafkaProperties, throughput, duration);
     }
 
@@ -81,9 +92,70 @@ public class PepperBoxLoadConsumer extends Thread {
         props.put("value.deserializer",
                 "org.apache.kafka.common.serialization.StringDeserializer");
 
-        // Add code to create the Kafka Consumer
+        kafkaConsumer = new KafkaConsumer<>(props);
+        LOGGER.info("Created Kafka Consumer");
+        kafkaConsumer.subscribe(Arrays.asList(perThreadTopic));
 
-        throw new PepperBoxException("Unfinished");
+        LOGGER.info("Duration: " + durationInMillis + " Subscribed to: " + perThreadTopic);
+    }
+
+    @Override
+    public void run() {
+        int messagesProcessed = 0;
+        try {
+            kafkaConsumer.subscribe(Arrays.asList(perThreadTopic));
+            long endTime = durationInMillis + System.currentTimeMillis();
+            int previousCount = -1;
+
+            String resultsFilename = "results-" + perThreadTopic + ".csv";
+            // Create/open the results file and write the header row.
+            LOGGER.info("Creating File:" + resultsFilename);
+            FileOutputStream f = new FileOutputStream(resultsFilename, true);
+            PrintStream p = new PrintStream(f);
+            p.println("batchReceived,messageGenerated,consumerLag,messageId,recordOffset,messageSize");
+
+            while (endTime > System.currentTimeMillis()) {
+                ConsumerRecords<String, String> consumerRecords = kafkaConsumer.poll(POLLING_INTERVAL);
+                int currentCount = consumerRecords.count();
+                if (currentCount != previousCount) {
+                    System.out.println("Received [" + currentCount + "] records in " + POLLING_INTERVAL);
+                    previousCount = currentCount;
+                }
+
+                if (currentCount == 0) {
+                    // No more processing needed for this batch
+                    continue;
+                }
+                long batchReceived = System.currentTimeMillis();
+
+                for (ConsumerRecord<String, String> record : consumerRecords) {
+                    JSONParser jsonParser = new JSONParser();
+                    try {
+                        Object jsonObj = jsonParser.parse(record.value());
+                        JSONObject jsonObject = (JSONObject) jsonObj;
+                        Long messageId = (Long) jsonObject.get("messageId");
+                        Long createTimestamp = (Long) jsonObject.get("messageTime");
+                        int size = record.toString().length();
+
+                        Long consumerLag = batchReceived - createTimestamp;
+                        p.println(String.format("%d,%d,%d,%d,%d,%d",
+                                batchReceived, createTimestamp, consumerLag, messageId, record.offset(), size));
+                        messagesProcessed++;
+                    } catch (ParseException pe) {
+                        LOGGER.warning("Unable to parse record: " + record.toString());
+                    }
+                }
+                kafkaConsumer.commitSync();
+            }
+            kafkaConsumer.unsubscribe();
+            kafkaConsumer.close();
+            p.close();
+            f.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            System.out.println("Finished topic: " + perThreadTopic + ", processed: " + messagesProcessed + " messages.");
+        }
     }
 
     public static void checkRequiredArgs(OptionParser parser, OptionSet options, OptionSpec... required) {
@@ -133,6 +205,7 @@ public class PepperBoxLoadConsumer extends Thread {
                 } else {
                     jsonConsumer = new PepperBoxLoadConsumer(options.valueOf(consumerConfig), options.valueOf(throughput), options.valueOf(duration));
                 }
+                LOGGER.info("Starting Thread: " + i);
                 jsonConsumer.start();
             }
 
@@ -140,7 +213,7 @@ public class PepperBoxLoadConsumer extends Thread {
             LOGGER.log(Level.SEVERE, "Failed to generate load", e);
             System.exit(1);
         }
-        System.exit(0);
+        // System.exit(0);
     }
 
 }
