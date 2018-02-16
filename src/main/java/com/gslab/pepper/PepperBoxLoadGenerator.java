@@ -35,7 +35,8 @@ import java.util.logging.Logger;
 
 /**
  * The com.gslab.pepper.PepperBoxLoadGenerator standalone load generator.
- * This class takes arguments like throttle per thread, test duration, no of thread and schema file and kafka producer properties and generates load at throttled rate.
+ * This class takes arguments including throttle per thread, test duration, no of thread and schema file and kafka
+ * producer properties and generates load at throttled rate.
  *
  * @Author Satish Bhor<satish.bhor@gslab.com>, Nachiket Kate <nachiket.kate@gslab.com>
  * @Version 1.0
@@ -275,11 +276,11 @@ public class PepperBoxLoadGenerator extends Thread {
                 .withRequiredArg()
                 .describedAs("producers")
                 .ofType(Integer.class);
-        // TODO 20180208 Set this to optional, once I know how to do so.
-        ArgumentAcceptingOptionSpec<String> aTopicPerThread = parser.accepts("per-thread-topics", "REQUIRED: Create a separate topic per producer")
+        ArgumentAcceptingOptionSpec<String> aTopicPerThread = parser.accepts("per-thread-topics", "OPTIONAL: Create a separate topic per producer")
                 .withRequiredArg()
                 .describedAs("create a topic per thread")
-                .ofType(String.class);
+                .ofType(String.class)
+                .defaultsTo("NO");
 
         if (args.length == 0) {
             CommandLineUtils.printUsageAndDie(parser, "Kafka console load generator.");

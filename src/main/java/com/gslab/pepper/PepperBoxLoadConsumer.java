@@ -1,5 +1,6 @@
 package com.gslab.pepper;
 
+import com.google.common.util.concurrent.RateLimiter;
 import com.gslab.pepper.exception.PepperBoxException;
 import com.gslab.pepper.util.ConsumerKeys;
 import joptsimple.ArgumentAcceptingOptionSpec;
@@ -11,6 +12,7 @@ import kafka.utils.CommandLineUtils;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -29,6 +31,10 @@ import org.xbill.DNS.DNSSEC;
  * slower consumer.
  */
 public class PepperBoxLoadConsumer extends Thread {
+    private long durationInMillis;
+    private RateLimiter limiter;
+    private static String PEPPERBOX_GROUP_NAME = "pepperbox_loadgenerator";
+
     private static Logger LOGGER = Logger.getLogger(PepperBoxLoadConsumer.class.getName());
 
     PepperBoxLoadConsumer(Integer threadId, String consumerConfig, Integer throughput, Integer duration) throws PepperBoxException {
@@ -42,24 +48,38 @@ public class PepperBoxLoadConsumer extends Thread {
         LOGGER.log(Level.INFO, "Thread [" + threadId.toString() + "] using topic [" +
                 inputProps.getProperty(ConsumerKeys.KAFKA_TOPIC_CONFIG) + "]");
 
-        createConsumer(consumerConfig, throughput, duration);
+        createConsumer(inputProps, throughput, duration);
     }
 
     PepperBoxLoadConsumer(String consumerConfig, Integer throughput, Integer duration) throws PepperBoxException {
-        createConsumer(consumerConfig, throughput, duration);
+        Properties kafkaProperties = populateConsumerProperties(consumerConfig);
+        createConsumer(kafkaProperties, throughput, duration);
     }
 
     Properties populateConsumerProperties(String consumerProps) throws PepperBoxException {
-        Properties inputProps = new Properties();
+        Properties kafkaProperties = new Properties();
         try {
-            inputProps.load(new FileInputStream(consumerProps));
+            kafkaProperties.load(new FileInputStream(consumerProps));
         } catch (IOException e) {
             throw new PepperBoxException(e);
         }
-        return inputProps;
+        return kafkaProperties;
     }
 
-    private void createConsumer(String consumerConfig, Integer throughput, Integer duration) throws PepperBoxException {
+    private void createConsumer(Properties kafkaProperties, Integer throughput, Integer duration) throws PepperBoxException {
+
+        limiter = RateLimiter.create(throughput);
+        durationInMillis = TimeUnit.SECONDS.toMillis(duration);
+        Properties props = new Properties();
+        props.put("bootstrap.servers", kafkaProperties.getProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG));
+        props.put("group.id", PEPPERBOX_GROUP_NAME);
+        props.put("enable.auto.commit", "false");
+        props.put("auto.offset.reset", "earliest") ; // start at the beginning of the topic (since it's created for us)
+        props.put("session.timeout.ms", "10000");
+        props.put("key.deserializer",
+                "org.apache.kafka.common.serialization.StringDeserializer");
+        props.put("value.deserializer",
+                "org.apache.kafka.common.serialization.StringDeserializer");
 
         // Add code to create the Kafka Consumer
 
@@ -76,7 +96,7 @@ public class PepperBoxLoadConsumer extends Thread {
 
     public static void main(String args[]) {
         OptionParser parser = new OptionParser();
-        ArgumentAcceptingOptionSpec<String> consumerConfig = parser.accepts("consumer-config-file", "REQUIRED: Kafka producer properties file absolute path.")
+        ArgumentAcceptingOptionSpec<String> consumerConfig = parser.accepts("consumer-config-file", "REQUIRED: Kafka consumer properties filename.")
                 .withRequiredArg()
                 .describedAs("consumer properties")
                 .ofType(String.class);
@@ -88,13 +108,14 @@ public class PepperBoxLoadConsumer extends Thread {
                 .withRequiredArg()
                 .describedAs("test duration")
                 .ofType(Integer.class);
-        ArgumentAcceptingOptionSpec<Integer> threadCount = parser.accepts("num-consumers", "REQUIRED: Number of producer threads.")
+        ArgumentAcceptingOptionSpec<Integer> threadCount = parser.accepts("num-consumers", "REQUIRED: Number of consumer threads.")
                 .withRequiredArg()
                 .describedAs("consumers")
                 .ofType(Integer.class);
-        ArgumentAcceptingOptionSpec<String> aTopicPerThread = parser.accepts("per-thread-topics", "REQUIRED: Create a separate topic per producer")
+        ArgumentAcceptingOptionSpec<String> aTopicPerThread = parser.accepts("per-thread-topics", "OPTIONAL: Create a separate topic per producer")
                 .withRequiredArg()
                 .describedAs("create a topic per thread")
+                .defaultsTo("NO")
                 .ofType(String.class);
 
         if (args.length == 0) {
