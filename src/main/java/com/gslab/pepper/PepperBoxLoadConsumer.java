@@ -94,9 +94,6 @@ public class PepperBoxLoadConsumer extends Thread {
 
         kafkaConsumer = new KafkaConsumer<>(props);
         LOGGER.info("Created Kafka Consumer");
-        kafkaConsumer.subscribe(Arrays.asList(perThreadTopic));
-
-        LOGGER.info("Duration: " + durationInMillis + " Subscribed to: " + perThreadTopic);
     }
 
     @Override
@@ -104,6 +101,7 @@ public class PepperBoxLoadConsumer extends Thread {
         int messagesProcessed = 0;
         try {
             kafkaConsumer.subscribe(Arrays.asList(perThreadTopic));
+            LOGGER.info("Duration: " + durationInMillis + " Subscribed to: " + perThreadTopic);
             long endTime = durationInMillis + System.currentTimeMillis();
             int previousCount = -1;
 
@@ -185,10 +183,14 @@ public class PepperBoxLoadConsumer extends Thread {
                 .describedAs("consumers")
                 .ofType(Integer.class);
         ArgumentAcceptingOptionSpec<String> aTopicPerThread = parser.accepts("per-thread-topics", "OPTIONAL: Create a separate topic per producer")
-                .withRequiredArg()
+                .withOptionalArg()
                 .describedAs("create a topic per thread")
                 .defaultsTo("NO")
                 .ofType(String.class);
+        ArgumentAcceptingOptionSpec<Integer> startingOffset = parser.accepts("starting-offset", "OPTIONAL: Starting count for separate topics, default 0")
+                .withOptionalArg().ofType(Integer.class).defaultsTo(Integer.valueOf(0), new Integer[0])
+                .describedAs("starting offset for the topic per thread")
+                ;
 
         if (args.length == 0) {
             CommandLineUtils.printUsageAndDie(parser, "Kafka console load consumer.");
@@ -196,12 +198,14 @@ public class PepperBoxLoadConsumer extends Thread {
         }
         OptionSet options = parser.parse(args);
         checkRequiredArgs(parser, options, consumerConfig, throughput, duration, threadCount);
+        LOGGER.info("starting-offset: " + options.valueOf(startingOffset));
         try {
             int totalThreads = options.valueOf(threadCount);
             for (int i = 0; i < totalThreads; i++) {
                 PepperBoxLoadConsumer jsonConsumer;
                 if (options.valueOf(aTopicPerThread).equalsIgnoreCase("YES")) {
-                    jsonConsumer = new PepperBoxLoadConsumer(i, options.valueOf(consumerConfig), options.valueOf(throughput), options.valueOf(duration));
+                    int topicId = i + options.valueOf(startingOffset);
+                    jsonConsumer = new PepperBoxLoadConsumer(topicId, options.valueOf(consumerConfig), options.valueOf(throughput), options.valueOf(duration));
                 } else {
                     jsonConsumer = new PepperBoxLoadConsumer(options.valueOf(consumerConfig), options.valueOf(throughput), options.valueOf(duration));
                 }
