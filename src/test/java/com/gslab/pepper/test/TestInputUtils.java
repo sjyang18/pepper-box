@@ -27,7 +27,7 @@ public class TestInputUtils {
 
     public static String producerProps = "bootstrap.servers=%s:%s\n" +
             "zookeeper.servers=%s:%d\n" +
-            "kafka.topic.name=test\n" +
+            "kafka.topic.name=%s\n" +
             "key.serializer=org.apache.kafka.common.serialization.StringSerializer\n" +
             "value.serializer=org.apache.kafka.common.serialization.StringSerializer\n" +
             "acks=0\n" +

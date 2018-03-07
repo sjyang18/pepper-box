@@ -233,7 +233,7 @@ public class PepperBoxLoadGenerator extends Thread {
         while (endTime > System.currentTimeMillis()) {
             sendMessage();
         }
-        System.out.println("Thread " + Thread.currentThread().getId() + ", done; messages = " + messageCount);
+        System.out.println("Thread " + Thread.currentThread().getId() + " done; topic = " + topic + "; messages = " + messageCount);
         producer.close();
     }
 
@@ -281,18 +281,24 @@ public class PepperBoxLoadGenerator extends Thread {
                 .describedAs("create a topic per thread")
                 .ofType(String.class)
                 .defaultsTo("NO");
+        ArgumentAcceptingOptionSpec<Integer> startingOffset = parser.accepts("starting-offset", "OPTIONAL: Starting count for separate topics, default 0")
+                .withOptionalArg().ofType(Integer.class).defaultsTo(Integer.valueOf(0), new Integer[0])
+                .describedAs("starting offset for the topic per thread")
+                ;
 
         if (args.length == 0) {
             CommandLineUtils.printUsageAndDie(parser, "Kafka console load generator.");
         }
         OptionSet options = parser.parse(args);
         checkRequiredArgs(parser, options, schemaFile, producerConfig, throughput, duration, threadCount);
+        LOGGER.info("starting-offset: " + options.valueOf(startingOffset));
         try {
             int totalThreads = options.valueOf(threadCount);
             for (int i = 0; i < totalThreads; i++) {
                 PepperBoxLoadGenerator jsonProducer;
                 if (options.valueOf(aTopicPerThread).equalsIgnoreCase("YES")) {
-                    jsonProducer = new PepperBoxLoadGenerator(i, options.valueOf(schemaFile), options.valueOf(producerConfig), options.valueOf(throughput), options.valueOf(duration));
+                    int topicId = i + options.valueOf(startingOffset);
+                    jsonProducer = new PepperBoxLoadGenerator(topicId, options.valueOf(schemaFile), options.valueOf(producerConfig), options.valueOf(throughput), options.valueOf(duration));
                 } else {
                     jsonProducer = new PepperBoxLoadGenerator(options.valueOf(schemaFile), options.valueOf(producerConfig), options.valueOf(throughput), options.valueOf(duration));
                 }

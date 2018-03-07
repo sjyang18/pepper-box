@@ -35,7 +35,7 @@ public class PepperBoxLoadGenTest {
     private static final String ZKHOST = "127.0.0.1";
     private static final String BROKERHOST = "127.0.0.1";
     private static final String BROKERPORT = "9092";
-    private static final String TOPIC = "test";
+    private static final String TOPIC = "loadgentest";
     private static final int NUM_PRODUCERS = 3;
     public static final int POLL_DURATION = 30000;
 
@@ -137,7 +137,7 @@ public class PepperBoxLoadGenTest {
         File producerFile = File.createTempFile("producer", ".properties");
         producerFile.deleteOnExit();
         FileWriter producerPropsWriter = new FileWriter(producerFile);
-        producerPropsWriter.write(String.format(TestInputUtils.producerProps, BROKERHOST, BROKERPORT, ZKHOST, zkServer.port()));
+        producerPropsWriter.write(String.format(TestInputUtils.producerProps, BROKERHOST, BROKERPORT, ZKHOST, zkServer.port(), TOPIC));
         producerPropsWriter.close();
         return producerFile;
     }
