@@ -17,15 +17,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import com.gslab.pepper.exception.PepperBoxException;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.protocol.SecurityProtocol;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.xbill.DNS.DNSSEC;
+
+import static org.apache.kafka.common.config.SaslConfigs.SASL_MECHANISM;
 
 /**
  * PepperBoxLoadConsumer: the partner of PepperBoxLoadGenerator.
@@ -92,6 +96,25 @@ public class PepperBoxLoadConsumer extends Thread {
         props.put("value.deserializer",
                 "org.apache.kafka.common.serialization.StringDeserializer");
 
+        final String security_protocol = kafkaProperties.getProperty(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG);
+        System.out.println("security_protocol set to[" + security_protocol + "], comparing to [" + SecurityProtocol.SASL_SSL.name +"].");
+        if (security_protocol.equals(SecurityProtocol.SASL_SSL.name)) {
+            LOGGER.info("Adding SASL_SSL parameters for Kafka to use.");
+            props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, security_protocol);
+            String sasl_jaas_config = "org.apache.kafka.common.security.plain.PlainLoginModule required" +
+                    " username=\"" + kafkaProperties.getProperty("sasl.jaas.username") +
+                    "\" password=\"" + kafkaProperties.getProperty("sasl.jaas.password") + "\";";
+            System.out.println("sasl.jaas.config: " + sasl_jaas_config);
+            props.put("sasl.jaas.config", sasl_jaas_config);
+            props.put("sasl.mechanism", kafkaProperties.getProperty("sasl.mechanism"));
+
+            props.put("ssl.enabled.protocols", kafkaProperties.getProperty("ssl.enabled.protocols"));
+            props.put("ssl.truststore.location", kafkaProperties.getProperty("ssl.truststore.location"));
+            props.put("ssl.truststore.password", kafkaProperties.getProperty("ssl.truststore.password"));
+            props.put("ssl.truststore.type", kafkaProperties.getProperty("ssl.truststore.type"));
+        }
+
+
         kafkaConsumer = new KafkaConsumer<>(props);
         LOGGER.info("Created Kafka Consumer");
     }
@@ -110,7 +133,7 @@ public class PepperBoxLoadConsumer extends Thread {
             LOGGER.info("Creating File:" + resultsFilename);
             FileOutputStream f = new FileOutputStream(resultsFilename, true);
             PrintStream p = new PrintStream(f);
-            p.println("batchReceived,messageGenerated,consumerLag,messageId,recordOffset,messageSize");
+            p.println("batchReceived,messageGenerated,consumerLag,messageId,recordOffset,messageSize,recordTimestamp");
 
             while (endTime > System.currentTimeMillis()) {
                 ConsumerRecords<String, String> consumerRecords = kafkaConsumer.poll(POLLING_INTERVAL);
@@ -136,8 +159,8 @@ public class PepperBoxLoadConsumer extends Thread {
                         int size = record.toString().length();
 
                         Long consumerLag = batchReceived - createTimestamp;
-                        p.println(String.format("%d,%d,%d,%d,%d,%d",
-                                batchReceived, createTimestamp, consumerLag, messageId, record.offset(), size));
+                        p.println(String.format("%d,%d,%d,%d,%d,%d,%d",
+                                batchReceived, createTimestamp, consumerLag, messageId, record.offset(), size, record.timestamp()));
                         messagesProcessed++;
                     } catch (ParseException pe) {
                         LOGGER.warning("Unable to parse record: " + record.toString());
