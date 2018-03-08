@@ -11,6 +11,7 @@ import joptsimple.ArgumentAcceptingOptionSpec;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
+import kafka.server.KafkaConfig;
 import kafka.utils.CommandLineUtils;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -233,7 +234,7 @@ public class PepperBoxLoadGenerator extends Thread {
         while (endTime > System.currentTimeMillis()) {
             sendMessage();
         }
-        System.out.println("Thread " + Thread.currentThread().getId() + " done; topic = " + topic + "; messages = " + messageCount);
+        System.out.println("{status:testCompleted}, {thread:" + Thread.currentThread().getId() + "}, {topic:" + topic + "}, {messages:" + messageCount + "}");
         producer.close();
     }
 
@@ -241,7 +242,7 @@ public class PepperBoxLoadGenerator extends Thread {
         limiter.acquire();
         ProducerRecord<String, String> keyedMsg = new ProducerRecord<>(topic, iterator.next().toString());
         if (++messageCount % 100 == 1) {
-            LOGGER.info(messageCount + " sent.");
+            LOGGER.info("{status:interim}, {topic:" +topic + "}, {messages:" + messageCount + "}");
         }
         producer.send(keyedMsg);
     }
