@@ -40,13 +40,24 @@ public class PepperBoxLoadConsumer extends Thread {
     private static int totalThreads;
     private static int offset;
     private long durationInMillis;
+
+    private static String topic;
+    String perThreadTopic;
+
     private RateLimiter limiter;
     KafkaConsumer<String, String> kafkaConsumer;
-    String perThreadTopic;
 
     private static String PEPPERBOX_GROUP_NAME = "pepperbox_loadgenerator";
     private static Long POLLING_INTERVAL = 100L;
     private static Logger LOGGER = Logger.getLogger(PepperBoxLoadConsumer.class.getName());
+
+    private boolean TopicNameIsOk(String topicName) {
+        if (topicName != null && topicName.length() > 1) {
+            return true;
+        } else {
+            return false;
+        }
+    }
 
     PepperBoxLoadConsumer(Integer thread, String consumerConfig, Integer throughput, Integer duration) throws PepperBoxException {
         Integer topicId = thread + offset;
@@ -55,7 +66,24 @@ public class PepperBoxLoadConsumer extends Thread {
 
         Properties kafkaProperties = populateConsumerProperties(consumerConfig);
 
-        perThreadTopic = kafkaProperties.getProperty(ConsumerKeys.KAFKA_TOPIC_CONFIG) + "." + topicId.toString();
+        String topicInPropertiesFile = kafkaProperties.getProperty(ConsumerKeys.KAFKA_TOPIC_CONFIG);
+        TopicNameIsOk(topicInPropertiesFile);
+        if (TopicNameIsOk(topic)) {
+            // If the topic name is provided on the command-line, use it.
+            perThreadTopic = topic + "." + topicId.toString();
+            // Inform the user if topic name is in both the file and on the command line.
+            if (TopicNameIsOk(topicInPropertiesFile)) {
+                LOGGER.warning(String.format("Using topic=%s provided on command-line, not=%s found in file=%s",
+                        topic, topicInPropertiesFile, consumerConfig));
+            }
+        } else {
+            if (!TopicNameIsOk(topicInPropertiesFile)) {
+                LOGGER.warning("No valid topic name, found: " + topicInPropertiesFile);
+                System.exit(2);
+            }
+            perThreadTopic = topicInPropertiesFile + "." + topicId.toString();
+        }
+
         kafkaProperties.setProperty(ConsumerKeys.KAFKA_TOPIC_CONFIG, perThreadTopic);
         LOGGER.log(Level.INFO, "Thread [" + topicId.toString() + "] using topic [" +
                 kafkaProperties.getProperty(ConsumerKeys.KAFKA_TOPIC_CONFIG) + "]");
@@ -204,12 +232,16 @@ public class PepperBoxLoadConsumer extends Thread {
                 .withRequiredArg()
                 .describedAs("consumers")
                 .ofType(Integer.class);
-        ArgumentAcceptingOptionSpec<String> aTopicPerThread = parser.accepts("per-thread-topics", "OPTIONAL: Create a separate topic per producer")
+        ArgumentAcceptingOptionSpec<String> topicName = parser.accepts("topic-name", "REQUIRED: core topic name to read from.")
+                .withRequiredArg()
+                .describedAs("topic")
+                .ofType(String.class);
+        ArgumentAcceptingOptionSpec<String> aTopicPerThread = parser.accepts("per-thread-topics", "OPTIONAL: Create a separate topic per producer?")
                 .withOptionalArg()
                 .describedAs("create a topic per thread")
                 .defaultsTo("NO")
                 .ofType(String.class);
-        ArgumentAcceptingOptionSpec<Integer> startingOffset = parser.accepts("starting-offset", "OPTIONAL: Starting count for separate topics, default 0")
+        ArgumentAcceptingOptionSpec<Integer> startingOffset = parser.accepts("starting-offset", "OPTIONAL: Starting count for separate topics, default 0.")
                 .withOptionalArg().ofType(Integer.class).defaultsTo(Integer.valueOf(0), new Integer[0])
                 .describedAs("starting offset for the topic per thread")
                 ;
@@ -220,6 +252,7 @@ public class PepperBoxLoadConsumer extends Thread {
         }
         OptionSet options = parser.parse(args);
         checkRequiredArgs(parser, options, consumerConfig, throughput, duration, threadCount);
+        topic = options.valueOf(topicName);
         offset = options.valueOf(startingOffset);
         LOGGER.info("starting-offset: " + offset);
         try {
