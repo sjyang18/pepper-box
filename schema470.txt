@@ -1,0 +1,5 @@
+{
+        "messageId":{{SEQUENCE("messageId", 1, 1)}},
+        "messageBody":"{{RANDOM_ALPHA_NUMERIC("abcedefghijklmnopqrwxyzABCDEFGHIJKLMNOPQRWXYZ", 470)}}",
+        "messageTime":{{TIMESTAMP()}}
+}
