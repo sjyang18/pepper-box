@@ -10,7 +10,6 @@ import joptsimple.OptionSpec;
 import kafka.utils.CommandLineUtils;
 
 import java.io.*;
-import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
@@ -19,7 +18,6 @@ import java.util.logging.Logger;
 
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import com.gslab.pepper.exception.PepperBoxException;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -27,9 +25,6 @@ import org.apache.kafka.common.protocol.SecurityProtocol;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-import org.xbill.DNS.DNSSEC;
-
-import static org.apache.kafka.common.config.SaslConfigs.SASL_MECHANISM;
 
 /**
  * PepperBoxLoadConsumer: the partner of PepperBoxLoadGenerator.
@@ -42,6 +37,8 @@ import static org.apache.kafka.common.config.SaslConfigs.SASL_MECHANISM;
  * slower consumer.
  */
 public class PepperBoxLoadConsumer extends Thread {
+    private static int totalThreads;
+    private static int offset;
     private long durationInMillis;
     private RateLimiter limiter;
     KafkaConsumer<String, String> kafkaConsumer;
@@ -51,15 +48,16 @@ public class PepperBoxLoadConsumer extends Thread {
     private static Long POLLING_INTERVAL = 100L;
     private static Logger LOGGER = Logger.getLogger(PepperBoxLoadConsumer.class.getName());
 
-    PepperBoxLoadConsumer(Integer threadId, String consumerConfig, Integer throughput, Integer duration) throws PepperBoxException {
+    PepperBoxLoadConsumer(Integer thread, String consumerConfig, Integer throughput, Integer duration) throws PepperBoxException {
+        Integer topicId = thread + offset;
         Thread t = currentThread();
-        t.setName(threadId.toString());
+        t.setName(topicId.toString());
 
         Properties kafkaProperties = populateConsumerProperties(consumerConfig);
 
-        perThreadTopic = kafkaProperties.getProperty(ConsumerKeys.KAFKA_TOPIC_CONFIG) + "." + threadId.toString();
+        perThreadTopic = kafkaProperties.getProperty(ConsumerKeys.KAFKA_TOPIC_CONFIG) + "." + topicId.toString();
         kafkaProperties.setProperty(ConsumerKeys.KAFKA_TOPIC_CONFIG, perThreadTopic);
-        LOGGER.log(Level.INFO, "Thread [" + threadId.toString() + "] using topic [" +
+        LOGGER.log(Level.INFO, "Thread [" + topicId.toString() + "] using topic [" +
                 kafkaProperties.getProperty(ConsumerKeys.KAFKA_TOPIC_CONFIG) + "]");
 
         createConsumer(kafkaProperties, throughput, duration);
@@ -128,7 +126,7 @@ public class PepperBoxLoadConsumer extends Thread {
             long endTime = durationInMillis + System.currentTimeMillis();
             int previousCount = -1;
 
-            String resultsFilename = "results-" + perThreadTopic + ".csv";
+            String resultsFilename = "results-" + perThreadTopic + "-of-" + (offset + totalThreads) + ".csv";
             // Create/open the results file and write the header row.
             LOGGER.info("Creating File:" + resultsFilename);
             FileOutputStream f = new FileOutputStream(resultsFilename, true);
@@ -153,6 +151,7 @@ public class PepperBoxLoadConsumer extends Thread {
                     JSONParser jsonParser = new JSONParser();
                     try {
                         Object jsonObj = jsonParser.parse(record.value());
+                        int i = record.value().length();  // Does this vary from the toString.length()?
                         JSONObject jsonObject = (JSONObject) jsonObj;
                         Long messageId = (Long) jsonObject.get("messageId");
                         Long createTimestamp = (Long) jsonObject.get("messageTime");
@@ -221,14 +220,15 @@ public class PepperBoxLoadConsumer extends Thread {
         }
         OptionSet options = parser.parse(args);
         checkRequiredArgs(parser, options, consumerConfig, throughput, duration, threadCount);
-        LOGGER.info("starting-offset: " + options.valueOf(startingOffset));
+        offset = options.valueOf(startingOffset);
+        LOGGER.info("starting-offset: " + offset);
         try {
-            int totalThreads = options.valueOf(threadCount);
+            totalThreads = options.valueOf(threadCount);
             for (int i = 0; i < totalThreads; i++) {
                 PepperBoxLoadConsumer jsonConsumer;
                 if (options.valueOf(aTopicPerThread).equalsIgnoreCase("YES")) {
-                    int topicId = i + options.valueOf(startingOffset);
-                    jsonConsumer = new PepperBoxLoadConsumer(topicId, options.valueOf(consumerConfig), options.valueOf(throughput), options.valueOf(duration));
+
+                    jsonConsumer = new PepperBoxLoadConsumer(i,options.valueOf(consumerConfig), options.valueOf(throughput), options.valueOf(duration));
                 } else {
                     jsonConsumer = new PepperBoxLoadConsumer(options.valueOf(consumerConfig), options.valueOf(throughput), options.valueOf(duration));
                 }
