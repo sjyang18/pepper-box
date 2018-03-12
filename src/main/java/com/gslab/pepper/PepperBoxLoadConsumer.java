@@ -78,7 +78,7 @@ public class PepperBoxLoadConsumer extends Thread {
             }
         } else {
             if (!TopicNameIsOk(topicInPropertiesFile)) {
-                LOGGER.warning("No valid topic name, found: " + topicInPropertiesFile);
+                LOGGER.severe("No valid topic name, found: " + topicInPropertiesFile);
                 System.exit(2);
             }
             perThreadTopic = topicInPropertiesFile + "." + topicId.toString();
@@ -154,9 +154,11 @@ public class PepperBoxLoadConsumer extends Thread {
             long endTime = durationInMillis + System.currentTimeMillis();
             int previousCount = -1;
 
-            String resultsFilename = "results-" + perThreadTopic + "-of-" + (offset + totalThreads) + ".csv";
+            // In the following, allow for the zero-based numbering.
+            String resultsFilename = "results-" + perThreadTopic +
+                    ".of[" + offset + ".." +(offset + (totalThreads - 1)) + "].csv";
             // Create/open the results file and write the header row.
-            LOGGER.info("Creating File:" + resultsFilename);
+            LOGGER.info("Creating File: " + resultsFilename);
             FileOutputStream f = new FileOutputStream(resultsFilename, true);
             PrintStream p = new PrintStream(f);
             p.println("batchReceived,messageGenerated,consumerLag,messageId,recordOffset,messageSize,recordTimestamp");
@@ -232,7 +234,7 @@ public class PepperBoxLoadConsumer extends Thread {
                 .withRequiredArg()
                 .describedAs("consumers")
                 .ofType(Integer.class);
-        ArgumentAcceptingOptionSpec<String> topicName = parser.accepts("topic-name", "REQUIRED: core topic name to read from.")
+        ArgumentAcceptingOptionSpec<String> topicName = parser.accepts("topic-name", "OPTIONAL: core topic name to read from.")
                 .withRequiredArg()
                 .describedAs("topic")
                 .ofType(String.class);
@@ -241,7 +243,7 @@ public class PepperBoxLoadConsumer extends Thread {
                 .describedAs("create a topic per thread")
                 .defaultsTo("NO")
                 .ofType(String.class);
-        ArgumentAcceptingOptionSpec<Integer> startingOffset = parser.accepts("starting-offset", "OPTIONAL: Starting count for separate topics, default 0.")
+        ArgumentAcceptingOptionSpec<Integer> startingOffset = parser.accepts("starting-offset", "OPTIONAL: Starting count for separate topics.")
                 .withOptionalArg().ofType(Integer.class).defaultsTo(Integer.valueOf(0), new Integer[0])
                 .describedAs("starting offset for the topic per thread")
                 ;
