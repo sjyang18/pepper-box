@@ -11,7 +11,6 @@ import joptsimple.ArgumentAcceptingOptionSpec;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
-import kafka.server.KafkaConfig;
 import kafka.utils.CommandLineUtils;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -49,30 +48,57 @@ public class PepperBoxLoadGenerator extends Thread {
     private RateLimiter limiter;
     private Iterator iterator = null;
     private KafkaProducer<String, String> producer;
-    private String topic;
+    private static int offset;
+    private static String topic;
+    String perThreadTopic;
     private long durationInMillis;
     private long messageCount = 0;
+
+    private boolean TopicNameIsOk(String topicName) {
+        if (topicName != null && topicName.length() > 1) {
+            return true;
+        } else {
+            return false;
+        }
+    }
 
     /**
      * Start kafka load generator from input properties and schema
      *
-     * @param threadIn the logical thread ID, starting with 0
+     * @param thread the logical thread ID, starting with 0
      * @param schemaFile
      * @param producerProps
      * @param throughput
      * @param duration
      * @throws PepperBoxException
      */
-    PepperBoxLoadGenerator(Integer threadIn, String schemaFile, String producerProps, Integer throughput, Integer duration) throws PepperBoxException {
+    PepperBoxLoadGenerator(Integer thread, String schemaFile, String producerProps, Integer throughput, Integer duration) throws PepperBoxException {
+        Integer topicId = thread + offset;
         Thread t = currentThread();
-        t.setName(threadIn.toString());
+        t.setName(thread.toString());
 
         Properties inputProps = populateProducerProps(producerProps);
 
-        String perThreadTopic = inputProps.getProperty(ProducerKeys.KAFKA_TOPIC_CONFIG) + "." + threadIn.toString();
-        inputProps.setProperty(ProducerKeys.KAFKA_TOPIC_CONFIG, perThreadTopic);
-        LOGGER.log(Level.INFO, "Thread [" + threadIn.toString() + "] using topic [" +
-                inputProps.getProperty(ProducerKeys.KAFKA_TOPIC_CONFIG) + "]");
+        String topicInPropertiesFile = inputProps.getProperty(ProducerKeys.KAFKA_TOPIC_CONFIG);
+        TopicNameIsOk(topicInPropertiesFile);
+
+        if (TopicNameIsOk(topic)) {
+            // If the topic name is provided on the command-line, use it.
+            perThreadTopic = topic + "." + topicId.toString();
+            // Inform the user if topic name is in both the file and on the command line.
+            if (TopicNameIsOk(topicInPropertiesFile)) {
+                LOGGER.warning(String.format("Using topic=%s provided on command-line, not=%s found in file=%s",
+                        topic, topicInPropertiesFile, producerProps));
+            }
+        } else {
+            if (!TopicNameIsOk(topicInPropertiesFile)) {
+                LOGGER.severe("No valid topic name, found: " + topicInPropertiesFile);
+                System.exit(2);
+            }
+            perThreadTopic = topicInPropertiesFile + "." + topicId.toString();
+        }
+
+        LOGGER.log(Level.INFO, "Thread [" + thread.toString() + "] using topic [" + perThreadTopic + "]");
 
         createProducer(schemaFile, throughput, duration, inputProps);
     }
@@ -89,6 +115,9 @@ public class PepperBoxLoadGenerator extends Thread {
     PepperBoxLoadGenerator(String schemaFile, String producerProps, Integer throughput, Integer duration) throws PepperBoxException {
 
         Properties inputProps = populateProducerProps(producerProps);
+        String topicInPropertiesFile = inputProps.getProperty(ProducerKeys.KAFKA_TOPIC_CONFIG);
+        TopicNameIsOk(topicInPropertiesFile);
+        perThreadTopic = topicInPropertiesFile;
         createProducer(schemaFile, throughput, duration, inputProps);
     }
 
@@ -165,7 +194,6 @@ public class PepperBoxLoadGenerator extends Thread {
             }
         });
 
-        topic = inputProps.getProperty(ProducerKeys.KAFKA_TOPIC_CONFIG);
         producer = new KafkaProducer<>(brokerProps);
     }
 
@@ -234,15 +262,15 @@ public class PepperBoxLoadGenerator extends Thread {
         while (endTime > System.currentTimeMillis()) {
             sendMessage();
         }
-        System.out.println("{status:testCompleted}, {thread:" + Thread.currentThread().getId() + "}, {topic:" + topic + "}, {messages:" + messageCount + "}");
+        System.out.println("{status:testCompleted}, {thread:" + Thread.currentThread().getId() + "}, {topic:" + perThreadTopic + "}, {messages:" + messageCount + "}");
         producer.close();
     }
 
     public void sendMessage() {
         limiter.acquire();
-        ProducerRecord<String, String> keyedMsg = new ProducerRecord<>(topic, iterator.next().toString());
+        ProducerRecord<String, String> keyedMsg = new ProducerRecord<>(perThreadTopic, iterator.next().toString());
         if (++messageCount % 100 == 1) {
-            LOGGER.info("{status:interim}, {topic:" +topic + "}, {messages:" + messageCount + "}");
+            LOGGER.info("{status:interim}, {topic:" + perThreadTopic + "}, {messages:" + messageCount + "}");
         }
         producer.send(keyedMsg);
     }
@@ -277,12 +305,16 @@ public class PepperBoxLoadGenerator extends Thread {
                 .withRequiredArg()
                 .describedAs("producers")
                 .ofType(Integer.class);
+        ArgumentAcceptingOptionSpec<String> topicName = parser.accepts("topic-name", "OPTIONAL: core topic name to write to.")
+                .withRequiredArg()
+                .describedAs("topic")
+                .ofType(String.class);
         ArgumentAcceptingOptionSpec<String> aTopicPerThread = parser.accepts("per-thread-topics", "OPTIONAL: Create a separate topic per producer")
                 .withRequiredArg()
                 .describedAs("create a topic per thread")
                 .ofType(String.class)
                 .defaultsTo("NO");
-        ArgumentAcceptingOptionSpec<Integer> startingOffset = parser.accepts("starting-offset", "OPTIONAL: Starting count for separate topics, default 0")
+        ArgumentAcceptingOptionSpec<Integer> startingOffset = parser.accepts("starting-offset", "OPTIONAL: Starting count for separate topics.")
                 .withOptionalArg().ofType(Integer.class).defaultsTo(Integer.valueOf(0), new Integer[0])
                 .describedAs("starting offset for the topic per thread")
                 ;
@@ -292,14 +324,15 @@ public class PepperBoxLoadGenerator extends Thread {
         }
         OptionSet options = parser.parse(args);
         checkRequiredArgs(parser, options, schemaFile, producerConfig, throughput, duration, threadCount);
+        topic = options.valueOf(topicName);
+        offset = options.valueOf(startingOffset);
         LOGGER.info("starting-offset: " + options.valueOf(startingOffset));
         try {
             int totalThreads = options.valueOf(threadCount);
             for (int i = 0; i < totalThreads; i++) {
                 PepperBoxLoadGenerator jsonProducer;
                 if (options.valueOf(aTopicPerThread).equalsIgnoreCase("YES")) {
-                    int topicId = i + options.valueOf(startingOffset);
-                    jsonProducer = new PepperBoxLoadGenerator(topicId, options.valueOf(schemaFile), options.valueOf(producerConfig), options.valueOf(throughput), options.valueOf(duration));
+                    jsonProducer = new PepperBoxLoadGenerator(i, options.valueOf(schemaFile), options.valueOf(producerConfig), options.valueOf(throughput), options.valueOf(duration));
                 } else {
                     jsonProducer = new PepperBoxLoadGenerator(options.valueOf(schemaFile), options.valueOf(producerConfig), options.valueOf(throughput), options.valueOf(duration));
                 }
