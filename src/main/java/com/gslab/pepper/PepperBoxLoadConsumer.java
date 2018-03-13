@@ -10,7 +10,6 @@ import joptsimple.OptionSpec;
 import kafka.utils.CommandLineUtils;
 
 import java.io.*;
-import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
@@ -19,7 +18,6 @@ import java.util.logging.Logger;
 
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import com.gslab.pepper.exception.PepperBoxException;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -27,9 +25,6 @@ import org.apache.kafka.common.protocol.SecurityProtocol;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-import org.xbill.DNS.DNSSEC;
-
-import static org.apache.kafka.common.config.SaslConfigs.SASL_MECHANISM;
 
 /**
  * PepperBoxLoadConsumer: the partner of PepperBoxLoadGenerator.
@@ -42,24 +37,55 @@ import static org.apache.kafka.common.config.SaslConfigs.SASL_MECHANISM;
  * slower consumer.
  */
 public class PepperBoxLoadConsumer extends Thread {
+    private static int totalThreads;
+    private static int offset;
     private long durationInMillis;
+
+    private static String topic;
+    String perThreadTopic;
+
     private RateLimiter limiter;
     KafkaConsumer<String, String> kafkaConsumer;
-    String perThreadTopic;
 
     private static String PEPPERBOX_GROUP_NAME = "pepperbox_loadgenerator";
     private static Long POLLING_INTERVAL = 100L;
     private static Logger LOGGER = Logger.getLogger(PepperBoxLoadConsumer.class.getName());
 
-    PepperBoxLoadConsumer(Integer threadId, String consumerConfig, Integer throughput, Integer duration) throws PepperBoxException {
+    private boolean TopicNameIsOk(String topicName) {
+        if (topicName != null && topicName.length() > 1) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    PepperBoxLoadConsumer(Integer thread, String consumerConfig, Integer throughput, Integer duration) throws PepperBoxException {
+        Integer topicId = thread + offset;
         Thread t = currentThread();
-        t.setName(threadId.toString());
+        t.setName(topicId.toString());
 
         Properties kafkaProperties = populateConsumerProperties(consumerConfig);
 
-        perThreadTopic = kafkaProperties.getProperty(ConsumerKeys.KAFKA_TOPIC_CONFIG) + "." + threadId.toString();
+        String topicInPropertiesFile = kafkaProperties.getProperty(ConsumerKeys.KAFKA_TOPIC_CONFIG);
+        TopicNameIsOk(topicInPropertiesFile);
+        if (TopicNameIsOk(topic)) {
+            // If the topic name is provided on the command-line, use it.
+            perThreadTopic = topic + "." + topicId.toString();
+            // Inform the user if topic name is in both the file and on the command line.
+            if (TopicNameIsOk(topicInPropertiesFile)) {
+                LOGGER.warning(String.format("Using topic=%s provided on command-line, not=%s found in file=%s",
+                        topic, topicInPropertiesFile, consumerConfig));
+            }
+        } else {
+            if (!TopicNameIsOk(topicInPropertiesFile)) {
+                LOGGER.severe("No valid topic name, found: " + topicInPropertiesFile);
+                System.exit(2);
+            }
+            perThreadTopic = topicInPropertiesFile + "." + topicId.toString();
+        }
+
         kafkaProperties.setProperty(ConsumerKeys.KAFKA_TOPIC_CONFIG, perThreadTopic);
-        LOGGER.log(Level.INFO, "Thread [" + threadId.toString() + "] using topic [" +
+        LOGGER.log(Level.INFO, "Thread [" + topicId.toString() + "] using topic [" +
                 kafkaProperties.getProperty(ConsumerKeys.KAFKA_TOPIC_CONFIG) + "]");
 
         createConsumer(kafkaProperties, throughput, duration);
@@ -128,9 +154,11 @@ public class PepperBoxLoadConsumer extends Thread {
             long endTime = durationInMillis + System.currentTimeMillis();
             int previousCount = -1;
 
-            String resultsFilename = "results-" + perThreadTopic + ".csv";
+            // In the following, allow for the zero-based numbering.
+            String resultsFilename = "results-" + perThreadTopic +
+                    ".of[" + offset + ".." +(offset + (totalThreads - 1)) + "].csv";
             // Create/open the results file and write the header row.
-            LOGGER.info("Creating File:" + resultsFilename);
+            LOGGER.info("Creating File: " + resultsFilename);
             FileOutputStream f = new FileOutputStream(resultsFilename, true);
             PrintStream p = new PrintStream(f);
             p.println("batchReceived,messageGenerated,consumerLag,messageId,recordOffset,messageSize,recordTimestamp");
@@ -153,6 +181,7 @@ public class PepperBoxLoadConsumer extends Thread {
                     JSONParser jsonParser = new JSONParser();
                     try {
                         Object jsonObj = jsonParser.parse(record.value());
+                        int i = record.value().length();  // Does this vary from the toString.length()?
                         JSONObject jsonObject = (JSONObject) jsonObj;
                         Long messageId = (Long) jsonObject.get("messageId");
                         Long createTimestamp = (Long) jsonObject.get("messageTime");
@@ -205,12 +234,16 @@ public class PepperBoxLoadConsumer extends Thread {
                 .withRequiredArg()
                 .describedAs("consumers")
                 .ofType(Integer.class);
-        ArgumentAcceptingOptionSpec<String> aTopicPerThread = parser.accepts("per-thread-topics", "OPTIONAL: Create a separate topic per producer")
+        ArgumentAcceptingOptionSpec<String> topicName = parser.accepts("topic-name", "OPTIONAL: core topic name to read from.")
+                .withRequiredArg()
+                .describedAs("topic")
+                .ofType(String.class);
+        ArgumentAcceptingOptionSpec<String> aTopicPerThread = parser.accepts("per-thread-topics", "OPTIONAL: Create a separate topic per producer?")
                 .withOptionalArg()
                 .describedAs("create a topic per thread")
                 .defaultsTo("NO")
                 .ofType(String.class);
-        ArgumentAcceptingOptionSpec<Integer> startingOffset = parser.accepts("starting-offset", "OPTIONAL: Starting count for separate topics, default 0")
+        ArgumentAcceptingOptionSpec<Integer> startingOffset = parser.accepts("starting-offset", "OPTIONAL: Starting count for separate topics.")
                 .withOptionalArg().ofType(Integer.class).defaultsTo(Integer.valueOf(0), new Integer[0])
                 .describedAs("starting offset for the topic per thread")
                 ;
@@ -221,14 +254,16 @@ public class PepperBoxLoadConsumer extends Thread {
         }
         OptionSet options = parser.parse(args);
         checkRequiredArgs(parser, options, consumerConfig, throughput, duration, threadCount);
-        LOGGER.info("starting-offset: " + options.valueOf(startingOffset));
+        topic = options.valueOf(topicName);
+        offset = options.valueOf(startingOffset);
+        LOGGER.info("starting-offset: " + offset);
         try {
-            int totalThreads = options.valueOf(threadCount);
+            totalThreads = options.valueOf(threadCount);
             for (int i = 0; i < totalThreads; i++) {
                 PepperBoxLoadConsumer jsonConsumer;
                 if (options.valueOf(aTopicPerThread).equalsIgnoreCase("YES")) {
-                    int topicId = i + options.valueOf(startingOffset);
-                    jsonConsumer = new PepperBoxLoadConsumer(topicId, options.valueOf(consumerConfig), options.valueOf(throughput), options.valueOf(duration));
+
+                    jsonConsumer = new PepperBoxLoadConsumer(i,options.valueOf(consumerConfig), options.valueOf(throughput), options.valueOf(duration));
                 } else {
                     jsonConsumer = new PepperBoxLoadConsumer(options.valueOf(consumerConfig), options.valueOf(throughput), options.valueOf(duration));
                 }
