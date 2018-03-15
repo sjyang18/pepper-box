@@ -50,7 +50,7 @@ public class PepperBoxLoadGenerator extends Thread {
     private KafkaProducer<String, String> producer;
     private static int offset;
     private static String topic;
-    String perThreadTopic;
+    String perThreadTopic; //CR: private
     private long durationInMillis;
     private long messageCount = 0;
 
@@ -72,6 +72,7 @@ public class PepperBoxLoadGenerator extends Thread {
      * @param duration
      * @throws PepperBoxException
      */
+    //CR: private
     PepperBoxLoadGenerator(Integer thread, String schemaFile, String producerProps, Integer throughput, Integer duration) throws PepperBoxException {
         Integer topicId = thread + offset;
         Thread t = currentThread();
@@ -80,7 +81,7 @@ public class PepperBoxLoadGenerator extends Thread {
         Properties inputProps = populateProducerProps(producerProps);
 
         String topicInPropertiesFile = inputProps.getProperty(ProducerKeys.KAFKA_TOPIC_CONFIG);
-        TopicNameIsOk(topicInPropertiesFile);
+        TopicNameIsOk(topicInPropertiesFile); //CR: This does nothing
 
         if (TopicNameIsOk(topic)) {
             // If the topic name is provided on the command-line, use it.
@@ -88,17 +89,17 @@ public class PepperBoxLoadGenerator extends Thread {
             // Inform the user if topic name is in both the file and on the command line.
             if (TopicNameIsOk(topicInPropertiesFile)) {
                 LOGGER.warning(String.format("Using topic=%s provided on command-line, not=%s found in file=%s",
-                        topic, topicInPropertiesFile, producerProps));
+                        topic, topicInPropertiesFile, producerProps)); //CR: Logs are all different styles
             }
         } else {
             if (!TopicNameIsOk(topicInPropertiesFile)) {
-                LOGGER.severe("No valid topic name, found: " + topicInPropertiesFile);
+                LOGGER.severe("No valid topic name, found: " + topicInPropertiesFile); //CR: Logs are all different styles
                 System.exit(2);
             }
             perThreadTopic = topicInPropertiesFile + "." + topicId.toString();
         }
 
-        LOGGER.log(Level.INFO, "Thread [" + thread.toString() + "] using topic [" + perThreadTopic + "]");
+        LOGGER.log(Level.INFO, "Thread [" + thread.toString() + "] using topic [" + perThreadTopic + "]"); //CR: Logs are all different styles
 
         createProducer(schemaFile, throughput, duration, inputProps);
     }
@@ -112,11 +113,11 @@ public class PepperBoxLoadGenerator extends Thread {
      * @param duration
      * @throws PepperBoxException
      */
+    //CR: private
     PepperBoxLoadGenerator(String schemaFile, String producerProps, Integer throughput, Integer duration) throws PepperBoxException {
-
         Properties inputProps = populateProducerProps(producerProps);
         String topicInPropertiesFile = inputProps.getProperty(ProducerKeys.KAFKA_TOPIC_CONFIG);
-        TopicNameIsOk(topicInPropertiesFile);
+        TopicNameIsOk(topicInPropertiesFile); //CR: this does nothing
         perThreadTopic = topicInPropertiesFile;
         createProducer(schemaFile, throughput, duration, inputProps);
     }
@@ -194,7 +195,7 @@ public class PepperBoxLoadGenerator extends Thread {
             }
         });
 
-        producer = new KafkaProducer<>(brokerProps);
+        producer = new KafkaProducer<>(brokerProps); //CR: This method should return, not set
     }
 
     /**
@@ -203,7 +204,7 @@ public class PepperBoxLoadGenerator extends Thread {
      * @param properties
      * @return
      */
-    private String getBrokerServers(Properties properties) {
+    private String getBrokerServers(Properties properties) { //CR: this isn't used
 
         StringBuilder kafkaBrokers = new StringBuilder();
 
@@ -262,6 +263,7 @@ public class PepperBoxLoadGenerator extends Thread {
         while (endTime > System.currentTimeMillis()) {
             sendMessage();
         }
+        //CR: Yet another logging format
         System.out.println("{status:testCompleted}, {thread:" + Thread.currentThread().getId() + "}, {topic:" + perThreadTopic + "}, {messages:" + messageCount + "}");
         producer.close();
     }
@@ -316,8 +318,7 @@ public class PepperBoxLoadGenerator extends Thread {
                 .defaultsTo("NO");
         ArgumentAcceptingOptionSpec<Integer> startingOffset = parser.accepts("starting-offset", "OPTIONAL: Starting count for separate topics.")
                 .withOptionalArg().ofType(Integer.class).defaultsTo(Integer.valueOf(0), new Integer[0])
-                .describedAs("starting offset for the topic per thread")
-                ;
+                .describedAs("starting offset for the topic per thread");
 
         if (args.length == 0) {
             CommandLineUtils.printUsageAndDie(parser, "Kafka console load generator.");
@@ -327,6 +328,9 @@ public class PepperBoxLoadGenerator extends Thread {
         topic = options.valueOf(topicName);
         offset = options.valueOf(startingOffset);
         LOGGER.info("starting-offset: " + options.valueOf(startingOffset));
+
+        //CR: Would be nice for argument parser things to be happening in a different method, it distracts from the actual running of the producer
+
         try {
             int totalThreads = options.valueOf(threadCount);
             for (int i = 0; i < totalThreads; i++) {

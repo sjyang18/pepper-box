@@ -42,16 +42,16 @@ public class PepperBoxLoadConsumer extends Thread {
     private long durationInMillis;
 
     private static String topic;
-    String perThreadTopic;
+    String perThreadTopic; //CR: private
 
-    private RateLimiter limiter;
-    KafkaConsumer<String, String> kafkaConsumer;
+    private RateLimiter limiter; //CR: not used
+    KafkaConsumer<String, String> kafkaConsumer; //CR: private
 
     private static String PEPPERBOX_GROUP_NAME = "pepperbox_loadgenerator";
     private static Long POLLING_INTERVAL = 100L;
     private static Logger LOGGER = Logger.getLogger(PepperBoxLoadConsumer.class.getName());
 
-    private boolean TopicNameIsOk(String topicName) {
+    private boolean TopicNameIsOk(String topicName) { //CR: Duplicate from Producer
         if (topicName != null && topicName.length() > 1) {
             return true;
         } else {
@@ -59,6 +59,7 @@ public class PepperBoxLoadConsumer extends Thread {
         }
     }
 
+    //CR: private
     PepperBoxLoadConsumer(Integer thread, String consumerConfig, Integer throughput, Integer duration) throws PepperBoxException {
         Integer topicId = thread + offset;
         Thread t = currentThread();
@@ -67,13 +68,13 @@ public class PepperBoxLoadConsumer extends Thread {
         Properties kafkaProperties = populateConsumerProperties(consumerConfig);
 
         String topicInPropertiesFile = kafkaProperties.getProperty(ConsumerKeys.KAFKA_TOPIC_CONFIG);
-        TopicNameIsOk(topicInPropertiesFile);
+        TopicNameIsOk(topicInPropertiesFile); //CR: Does nothing
         if (TopicNameIsOk(topic)) {
             // If the topic name is provided on the command-line, use it.
             perThreadTopic = topic + "." + topicId.toString();
             // Inform the user if topic name is in both the file and on the command line.
             if (TopicNameIsOk(topicInPropertiesFile)) {
-                LOGGER.warning(String.format("Using topic=%s provided on command-line, not=%s found in file=%s",
+                LOGGER.warning(String.format("Using topic=%s provided on command-line, not=%s found in file=%s", //CR: logging formats
                         topic, topicInPropertiesFile, consumerConfig));
             }
         } else {
@@ -91,12 +92,14 @@ public class PepperBoxLoadConsumer extends Thread {
         createConsumer(kafkaProperties, throughput, duration);
     }
 
+    //CR: private
     PepperBoxLoadConsumer(String consumerConfig, Integer throughput, Integer duration) throws PepperBoxException {
         Properties kafkaProperties = populateConsumerProperties(consumerConfig);
         perThreadTopic = kafkaProperties.getProperty(ConsumerKeys.KAFKA_TOPIC_CONFIG);
         createConsumer(kafkaProperties, throughput, duration);
     }
 
+    //CR: private
     Properties populateConsumerProperties(String consumerProps) throws PepperBoxException {
         Properties kafkaProperties = new Properties();
         try {
@@ -141,7 +144,7 @@ public class PepperBoxLoadConsumer extends Thread {
         }
 
 
-        kafkaConsumer = new KafkaConsumer<>(props);
+        kafkaConsumer = new KafkaConsumer<>(props); //CR: should return the consumer, rather than assign it
         LOGGER.info("Created Kafka Consumer");
     }
 
@@ -167,7 +170,7 @@ public class PepperBoxLoadConsumer extends Thread {
                 ConsumerRecords<String, String> consumerRecords = kafkaConsumer.poll(POLLING_INTERVAL);
                 int currentCount = consumerRecords.count();
                 if (currentCount != previousCount) {
-                    System.out.println("Received [" + currentCount + "] records in " + POLLING_INTERVAL);
+                    System.out.println("Received [" + currentCount + "] records in " + POLLING_INTERVAL); //CR: maybe log thread?
                     previousCount = currentCount;
                 }
 
@@ -192,7 +195,7 @@ public class PepperBoxLoadConsumer extends Thread {
                                 batchReceived, createTimestamp, consumerLag, messageId, record.offset(), size, record.timestamp()));
                         messagesProcessed++;
                     } catch (ParseException pe) {
-                        LOGGER.warning("Unable to parse record: " + record.toString());
+                        LOGGER.warning("Unable to parse record: " + record.toString()); //CR: useful to know which thread it failed on?
                     }
                 }
                 kafkaConsumer.commitSync();
@@ -204,7 +207,7 @@ public class PepperBoxLoadConsumer extends Thread {
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            System.out.println("Finished topic: " + perThreadTopic + ", processed: " + messagesProcessed + " messages.");
+            System.out.println("Finished topic: " + perThreadTopic + ", processed: " + messagesProcessed + " messages."); //CR: another logging format
         }
     }
 
@@ -245,8 +248,7 @@ public class PepperBoxLoadConsumer extends Thread {
                 .ofType(String.class);
         ArgumentAcceptingOptionSpec<Integer> startingOffset = parser.accepts("starting-offset", "OPTIONAL: Starting count for separate topics.")
                 .withOptionalArg().ofType(Integer.class).defaultsTo(Integer.valueOf(0), new Integer[0])
-                .describedAs("starting offset for the topic per thread")
-                ;
+                .describedAs("starting offset for the topic per thread");
 
         if (args.length == 0) {
             CommandLineUtils.printUsageAndDie(parser, "Kafka console load consumer.");
@@ -257,12 +259,14 @@ public class PepperBoxLoadConsumer extends Thread {
         topic = options.valueOf(topicName);
         offset = options.valueOf(startingOffset);
         LOGGER.info("starting-offset: " + offset);
+
+        //CR: Could move arg parsing into another method se we don't hide the actual invocation
+
         try {
             totalThreads = options.valueOf(threadCount);
             for (int i = 0; i < totalThreads; i++) {
                 PepperBoxLoadConsumer jsonConsumer;
                 if (options.valueOf(aTopicPerThread).equalsIgnoreCase("YES")) {
-
                     jsonConsumer = new PepperBoxLoadConsumer(i,options.valueOf(consumerConfig), options.valueOf(throughput), options.valueOf(duration));
                 } else {
                     jsonConsumer = new PepperBoxLoadConsumer(options.valueOf(consumerConfig), options.valueOf(throughput), options.valueOf(duration));
@@ -275,7 +279,6 @@ public class PepperBoxLoadConsumer extends Thread {
             LOGGER.log(Level.SEVERE, "Failed to generate load", e);
             System.exit(1);
         }
-        // System.exit(0);
     }
 
 }

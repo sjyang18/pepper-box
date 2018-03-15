@@ -19,7 +19,7 @@ public class PropsKeys {
     public static final String STR_APPEND = ".append ( ";
     public static final String STR_TOSTRING = ".toString()";
     public static final String CLOSING_BRACKET = " ) ";
-    public static final String STR_EMPTY = "";
+    public static final String STR_EMPTY = ""; //CR: Not used
     public static final String STR_TAB = "\t";
     public static final String STR_NEWLINE = "\n";
     public static final String STR_CARRIAGE_RETURN = "\r";
@@ -29,9 +29,9 @@ public class PropsKeys {
     public static final String MSG_GEN_PLC_HLDR = "{{MESSAGE_PLACE_HOLDER}}";
     public static final String JAVA_CLS_PLC_HLDR = "{{JAVA_CLASS_PLACEHOLDER}}";
     public static final String JAVA_CLASS = "MessageIterator";
-    public static final String JAVA_EXT = ".java";
-    public static final String CLASS_EXT = ".class";
-    public static final String SPLIT_BY_DOT = "\\.";
+    public static final String JAVA_EXT = ".java"; //CR: Not used
+    public static final String CLASS_EXT = ".class"; //CR: Not used
+    public static final String SPLIT_BY_DOT = "\\."; //CR: Not used
     public static final String MSG_PLACEHOLDER = "MESSAGE";
     public static final String PLAINTEXT_MESSAGE_GENERATOR_TPL = "MessageGenerator.tpl";
     public static final String SERIALIZED_MESSAGE_GENERATOR_TPL = "SerializedMessageGenerator.tpl";

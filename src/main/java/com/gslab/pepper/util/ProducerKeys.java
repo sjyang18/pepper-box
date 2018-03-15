@@ -10,7 +10,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
  */
 public class ProducerKeys {
     public static final String KAFKA_TOPIC_CONFIG = "kafka.topic.name";
-    public static final String KAFKA_TOPIC_CONFIG_DEFAULT = "<Topic>";
+    public static final String KAFKA_TOPIC_CONFIG_DEFAULT = "<Topic>"; //CR: Is this a great default topic name?
 
     public static final String ZOOKEEPER_SERVERS = "zookeeper.servers";
     public static final String ZOOKEEPER_SERVERS_DEFAULT = "<Zookeeper List>";
