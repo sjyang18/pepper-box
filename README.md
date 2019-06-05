@@ -36,7 +36,7 @@ For windows you can download oracle JDK 8 setup from [here](http://www.oracle.co
 
 #### Build Project
 ```
-mvn clean install -Djmeter.version=3.0 -Dkafka.version=0.9.0.1
+mvn clean install -Djmeter.version=5.1.1 -Dkafka.version=2.2.0
 ```
 JMeter and Kafka version can be passed dynamically.
 
